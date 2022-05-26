@@ -1,0 +1,14 @@
+<a href="[% Catalyst.uri_for('/quiz/create') %]"> Create New Quiz </a> <br>
+
+Take one of the Existing  quiz
+
+<ul>
+
+[% FOREACH quiz IN quizlist %]
+<li>
+    <a href="[% Catalyst.uri_for('/quiz/start'quiz.id) %]">[% quiz.name %] </a>
+</li>
+[% END %]
+
+</ul>
+

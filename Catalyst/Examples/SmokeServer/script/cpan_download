@@ -1,0 +1,64 @@
+#!/bin/sh
+
+# Dumbass minicpan replacement - Matt S Trout 2005/6. Perl license.
+
+# Modified to retrieve and extract dists that depend on Catalyst-Runtime
+# - Rafael Kitover (May 29 2009)
+
+# Pick one from http://cpan.org/SITES.html#RSYNC
+
+REMOTEHOST='mirror.netcologne.de'
+REMOTEPREFIX='cpan'
+
+LOCAL=$(perl -MFile::Basename=dirname -MCwd=abs_path -le 'print abs_path(dirname("'$0'")."/../cpan")')
+
+mkdir $LOCAL 2>/dev/null
+
+cd $LOCAL
+
+mkdir -p work authors/id modules
+
+rsync $REMOTEHOST::"$REMOTEPREFIX/modules/03modlist.data.gz $REMOTEPREFIX/modules/02packages.details.txt.gz" modules/
+
+zcat modules/02packages.details.txt.gz | egrep '\.(tar\.gz|tgz|zip)$' | egrep -v '/((perl-|parrot-|ponie-)[0-9]|perl5\.004)' | awk '{print $3}' | sort -u >work/available.dists
+
+perl -MWWW::Mechanize -le '
+    my $mech = WWW::Mechanize->new(stack_depth => 0);
+    $mech->get("http://cpants.perl.org/dist/used_by/Catalyst-Runtime");
+    my %cat_dists = map { $_->text => 1 }
+        $mech->find_all_links(url_regex => qr{^/dist/overview/(?!Catalyst-Runtime).*});
+    while (<>) {
+        chomp;
+        my ($dist) = m{/([^/]+)-\d};
+        print if exists $cat_dists{$dist};
+    }
+' < work/available.dists > work/catalyst.dists
+
+cat work/catalyst.dists | cut -d'/' -f1-3 | sort -u | perl -pe 's!$!/CHECKSUMS!;' >work/catalyst.checksums
+
+cat work/catalyst.dists | perl -pe 's!/[^/]+$!\n!;' >work/catalyst.dirs
+
+cd $LOCAL/authors/id
+
+cat $LOCAL/work/catalyst.dirs | xargs -n100 mkdir -p
+
+cat $LOCAL/work/catalyst.checksums | xargs -n100 touch
+
+cat $LOCAL/work/catalyst.dists | xargs -n100 touch
+
+cd $LOCAL
+
+rsync -vr --size-only --existing $REMOTEHOST::"$REMOTEPREFIX/authors/" authors/
+
+find authors/id -name '*.*' | perl -pe 's!^authors/id/!!;' | sort -u >work/tree.all
+
+sort -u work/catalyst.* | comm -13 - work/tree.all | perl -pe 's!^!authors/id/!;' | xargs rm -v 2>/dev/null
+
+# extract
+
+mkdir extracted 2>/dev/null
+cd extracted
+rm -rf *
+
+find ../authors/id -name '*.zip'    | while read f; do unzip $f  ; done
+find ../authors/id -name '*.tar.gz' | while read f; do tar zxf $f; done

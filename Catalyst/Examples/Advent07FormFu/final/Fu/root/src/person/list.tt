@@ -1,0 +1,11 @@
+<h1>Your buddies</h1>
+
+<p> <a href="[% c.uri_for('/person/add') %]">Add someone</a> </p>
+<ul>
+[% WHILE (person=persons.next) %]
+  <li> 
+    [% person.name %], [% person.email %], [% person.phone %],  [% person.gender %] - 
+    <a href="[% c.uri_for('/person/edit', person.person_id ) %]">Edit</a>
+  </li>
+[% END %]
+</ul>

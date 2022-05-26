@@ -1,0 +1,12 @@
+<h2>Categories</h2>
+<p style="font-size: 11px; display: inline;"><span class="special_text">Sort</span> [ <a href="#" id="alpha">alpha</a> | <a href="#" id="freq" class="selected">freq</a> ]</p>
+<ul>
+<div id="cat_list">
+[% FOREACH category = categories %]
+	<li><a title="[% category.name %]" href="/category/[% c.nifty_txt_to_url(category.name) %]">[% category.name %]</a></li>
+[% END %]
+<script type="text/javascript" charset="utf-8">
+	toggle_cat_list();
+</script>
+</div>
+</ul>

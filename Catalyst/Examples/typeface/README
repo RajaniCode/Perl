@@ -1,0 +1,42 @@
+Installation:
+	1) Run MakeFile.PL to install all dependencies.
+	2) Import the SQL schema.
+	3) Edit typeface.yml to suit your needs.
+	4) Run create_login.pl
+	5) Run script/typeface_server.pl -p 8080
+	6) Login into http://localhost:8080/!
+
+
+Features:
+	XML-RPC MetaWeblog support (MarsEdit supported http://ranchero.com/marsedit/)
+	Captcha image verification
+	Categories
+	Human readable URLs
+	Live ajax search
+	On site calendar
+	Tabbed static pages
+	Templates
+	SEO Optimized
+	RSS Syndication throughout the site 
+	Robust backend for posting.
+	Code highlight tags [code syntax="Perl"] print "hello world!"; [/code]
+		Valid syntax: CPP,CSS,HTML,Java,PHP,Perl.SQL
+
+TODO:
+	Code clean up
+	XML-RPC site pinging on article post
+	Implement my idea "MetaBonds"
+	
+
+BUGS:
+	Safari can't generate the WYSIWYG Editor on the fly in the back-end.
+	
+FAQ:
+Who is this release for?
+	 Everyone
+
+Why make yet another blog?
+	Why not? I am not pleased with wordpress due to its lack of caching. It can't hold up to a good old slashdotting! This blog takes advantage of extensive caching to benefit load times. I am tired of blogs going down due to high traffic! I want something that looks nice, pleasant to use and easy to deploy. 
+
+What makes this blog so special?
+	Fast,Free,Feature-full and easily deployable. Need I say more? 

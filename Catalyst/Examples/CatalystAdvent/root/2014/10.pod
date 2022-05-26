@@ -1,0 +1,55 @@
+=head1 Centralised configuration or re-using the Catalyst config files.
+
+It's common knowledge that you should avoid duplicated code. The same goes
+for configuration. L<Catalyst> keeps its configuration files in the Apps
+directory. e.g. if your apps name is MyApp the config file is named
+maypp.conf. L<Catalyst::Plugin::ConfigLoader> also loads myapp_local.conf
+if present. You can change the file format if you want, I prefer myapp.pl
+You can also change the  the '_local' suffix via ENV variables.
+(e.g. CATALYST_CONFIG_LOCAL_SUFFIX=testing to have myapp_testing.conf loaded)
+
+Quite often you have scripts or other parts in a project that need
+configuration aswell. I consider using the same config file for all
+project related stuff a good practise and L<Config::ZOMG> helps with that.
+
+    package MyApp::Config;
+    use Moose;
+    use Config::ZOMG;
+    has config => (
+        is   => 'ro',
+        isa  => 'Config::ZOMG',
+        lazy => 1,
+        default => sub {
+            my ($self) = @_;
+            my $config = Config::ZOMG->new(
+                name => 'mox',
+                path => 'config/',
+            );
+            $config->load; # for ->found to work
+            print "Loading config file '$_'\n" for $config->found;
+            return $config;
+        },
+    );
+    sub as_hash {
+        my ($self) = @_;
+        return $self->config->load;
+    }
+    __PACKAGE__->meta->make_immutable;
+    1;
+
+If I write a helper script I use it like this:
+
+    #!/usr/bin/env perl
+    use strict;
+    use warnings;
+    use FindBin qw/$Bin/;
+    use lib "$Bin/../lib";
+    use MyApp::Config;
+    my $config = MyApp::Config->new->as_hash;
+    my foobar = $config->{foobar};
+
+=head1 Author
+
+David Schmidt L<davewood@cpan.org|email:davewood@cpan.org>
+
+=cut

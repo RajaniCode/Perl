@@ -1,0 +1,8 @@
+<p>Replying to [% parent.title %]</p>
+<form method="POST" action="">
+<input type="hidden" name="submitted" value=1 />
+<p>Title: <input type="text" name="title" /></p>
+<p>Content:</p>
+<textarea name="content" rows="10" cols="45">
+</textarea>
+<p><input type="submit" name="submit" value="Post" />

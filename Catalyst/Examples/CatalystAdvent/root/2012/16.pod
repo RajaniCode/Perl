@@ -1,0 +1,124 @@
+
+=head1 Action Roles for cleaner, less stashy Catalyst Actions
+
+=head2 Overview
+
+How to Serialize return values from Catalyst Actions
+
+=head3 About this Article
+
+Please note that this article leverages behavior that used to only exist in L<Catalyst::Controller::ActionRole> 
+but has been merged into Catalyst proper in Catalyst v5.90013 .
+
+To take advantage of ActionRoles with an older Catalyst see the docs for L<Catalyst::Controller::ActionRole>.
+
+=head2 { hello => 'world' }
+
+
+Write a function that given a name, returns a user readable greeting along with a hashref of the data used.
+Simple.
+
+    sub hello {
+        my($name) = @_;
+        return {
+            message => "howdy $name",
+            metadata => {
+                name => $name,
+            },
+        };
+    }
+
+It's readable and extensible.
+
+Now re-written as a Catalyst Ajax endpoint:
+
+
+    sub hello {
+        my ( $self, $ctx ) = @_;
+        my $name = $ctx->req->params->{name};
+        $ctx->res->headers->{ContentType} = "text/javascript";
+        $ctx->res->body(
+            $self->json->encode(
+                {
+                    message  => "hello $name!",
+                    metadata => { name => $name },
+                }
+            )
+        );
+    }
+
+Pretty gross. Most of the method is no longer concerned with the actual data transformation and is instead doing a bunch of
+crap that you're probably repeating elsewhere.
+
+When that goes from being ugly to being a pain is when, for example, you decide you want migrate to using L<Catalyst::Controller::REST>.
+
+The method becomes:
+
+    sub hello {
+        my ( $self, $ctx ) = @_;
+        my $name = $ctx->req->params->{name};
+        return $ctx->stash->{rest} = 
+            {
+                message  => "hello $name!",
+                metadata => { name => $name },
+            };
+    }
+
+which is cleaner, but now you have to modify every action that used to use the first method.
+
+Let's clean this up a bit.
+
+In your controller:
+
+    __PACKAGE__->config( 
+        action => {
+            hello => {
+                Does => "SerializeReturnValue"
+            }
+        }
+    );
+
+....meanwhile, in lib/WebApp/ActionRole/SerializeReturnValue.pm
+
+    package WebApp::ActionRole::SerializeReturnValue;
+    use strictures 1;
+    use Moose::Role;
+
+    around execute => sub {
+        # $self is the $c->action being 'executed'
+        my ( $orig, $self ) = ( shift, shift );         
+        # execute is called on an action in a controller context
+        my ( $controller, $ctx ) = @_;
+        # wrap the original method
+        return $ctx->stash->{rest} = $self->$orig(@_);
+    };
+
+    no Moose::Role;
+    1;
+
+The method now becomes:
+
+    sub hello {
+        my ( $self, $ctx ) = @_;
+        my $name = $ctx->req->params->{name};
+        return {
+                message  => "hello $name!",
+                metadata => { name => $name },
+            };
+        )
+    }
+
+So while the 'name' param is still being grabbed from a global (we'll leave fixing that for another time and place), 
+the method is returning the intended hash without worrying about the encoding.
+
+Now you're sick of L<Catalyst::Controller::Rest> and want to handle serialization yourself? 
+No problem, change the ActionRole to JSON encode the return and drop it into the response body,
+or create a JSON (or xml or yml...) view and stash it in another key, or subclass L<Catalyst::Response> and give
+it a 'data' attribute, etc etc TIMDOWDI.
+
+Point is, you won't have to edit your 'hello' method or your 30 others that return serializable data because you've properly
+encapsulated your methods.
+
+=head1 AUTHOR
+
+Samuel Kaufman <skaufman@cpan.org>

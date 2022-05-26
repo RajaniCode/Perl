@@ -1,0 +1,8 @@
+This Catalyst Application (currently a work in progress) is a
+generator for a Q Sort.  Q Methodology is a statistical method for
+clustering and quantifying a set of subjective opinions within a
+sample.  For details see Stephenson, W. (1953). "The Study of
+Behaviour: Q Technique and its Methodology." Chicago: University of
+Chicago Press.
+
+It uses Blueprint CSS and Jquery for DOM manipulation.

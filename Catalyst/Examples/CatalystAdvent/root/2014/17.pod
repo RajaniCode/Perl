@@ -1,0 +1,133 @@
+=head1 The Plack::App::RapidApp::rDbic interface to RapidApp
+
+=head1 Overview
+
+In the previous article I introduced the L<RapidApp> utility script L<rdbic.pl> which 
+provides instant CRUD interfaces for L<DBI> databases. In this article we'll look
+at the internal module which L<rdbic.pl> uses, L<Plack::App::RapidApp::rDbic>
+
+=head1 Mounting the rDbic Plack app
+
+Consider the following L<rdbic.pl> command which starts up the CRUD app using 
+a built-in web server:
+
+  rdbic.pl dbi:mysql:mydb,root,''
+
+Internally, this starts a PSGI application using L<Plack::App::RapidApp::rDbic>
+which does the heavy lifting. The above rdbic.pl is roughly equivalent to the following 
+(which could be specified in a .psgi file and started with L<plackup>):
+
+  use Plack::App::RapidApp::rDbic;
+
+  my $app = Plack::App::RapidApp::rDbic->new({
+    connect_info => {
+      dsn      => 'dbi:mysql:mydb',
+      user     => 'root',
+      password => ''
+    }
+  })->to_app;
+
+Under the hood, this generates a fully working RapidApp/Catalyst application into a temp 
+directory, including generation of a L<DBIx::Class::Schema>, L<Model::DBIC::Schema|Catalyst::Model::DBIC::Schema> and L<Plugin::RapidDbic|Catalyst::Plugin::RapidApp::RapidDbic> 
+configuration using the RapidApp bootstrap system.
+
+Alternatively, if you already have a DBIC schema class, you can tell rDbic to use it 
+instead of auto-generating: 
+
+  my $app = Plack::App::RapidApp::rDbic->new({
+    schema_class => 'My::Db::Schema',
+    connect_info => {
+      dsn      => 'dbi:mysql:mydb',
+      user     => 'root',
+      password => ''
+    }
+  })->to_app;
+
+
+You can also supply an already connected schema object:
+
+  my $schema = My::Db::Schema->connect();
+  # ...
+
+  my $app = Plack::App::RapidApp::rDbic->new({
+    schema => $schema
+  })->to_app;
+
+
+This makes it possible to do things like exposing the rDbic a CRUD interface 
+within the structure of an existing Catalyst or PSGI app, such as:
+
+  use MyCatApp;
+  
+  my $app = MyCatApp->apply_default_middlewares(MyCatApp->psgi_app);
+  
+  use Plack::Builder;
+  use Plack::App::RapidApp::rDbic;
+  
+  my $rDbic = Plack::App::RapidApp::rDbic->new({
+    schema => MyCatApp->model('DB')->schema
+  });
+  
+  builder {
+    mount '/'       => $app;
+    mount '/rdbic/' => $rDbic->to_app;
+  };
+
+
+=head1 Configuration
+
+L<rDbic|Plack::App::RapidApp::rDbic> is just a Plack wrapper for a generated RapidApp 
+using L<Plugin::RapidDbic|Catalyst::Plugin::RapidApp::RapidDbic> which provides
+powerful configuration options.
+
+The RapidDbic plugin reads its config from the C<'RapidDbic'> key in DBIC::Schema model,
+and this can be set via the C<model_config> param to rDbic:
+
+  my $app = Plack::App::RapidApp::rDbic->new({
+    schema => $schema,
+    model_config => {
+      RapidDbic => {
+        # join all columns of all first-level relationships in all grids:
+        grid_params => {
+          '*defaults' => {
+            include_colspec => ['*','*.*']
+          }
+        },
+        # Set the display_column for the source named Account to 'fname':
+        TableSpecs => {
+          Account => {
+            display_column => 'fname'
+          },
+        }
+        # ...
+        # ...
+      }
+    }
+  })->to_app;
+
+RapidDbic allows for all kinds of scenarios and customization. For more
+info, see the Chinook demo on the RapidApp website:
+
+=over
+
+=item *
+
+L<http://www.rapidapp.info/demos/chinook>
+
+=back
+
+
+=head1 Summary
+
+L<Plack::App::RapidApp::rDbic> provides a convenient Plack-based interface to a
+runtime loaded L<RapidApp> using L<Plugin::RapidDbic|Catalyst::Plugin::RapidApp::RapidDbic>.
+This is a great place to get started with RapidApp, although it only scratches the surface
+of what can be done.
+
+To learn more or get involved, see the project website at L<www.rapidapp.info|http://www.rapidapp.info> or visit us on IRC in the C<#rapidapp> channel on C<irc.perl.org>. 
+
+=head1 Author
+
+Henry Van Styn L<vanstyn@cpan.org|email:vanstyn@cpan.org>
+
+=cut

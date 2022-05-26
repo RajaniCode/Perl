@@ -1,0 +1,5 @@
+[% page.stylesheets.push('kate.css') %]
+<h2>[% paste.title %] ([% paste.type %]) from [% paste.author %] ([% paste.ip_address %])</h2>
+<div class="contents">
+ <pre>[% paste.contents(c, c.req.params.no_highlight) %]</pre>
+</div>

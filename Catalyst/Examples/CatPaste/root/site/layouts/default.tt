@@ -1,0 +1,6 @@
+[%
+PROCESS "site/layouts/${layout.header}/header.tt";
+content;
+PROCESS "site/layouts/${layout.footer}/footer.tt"
+%]
+

@@ -1,0 +1,136 @@
+=head1 UTF8 in GET Query and Form POST
+
+All about stuff that is changing in the Holland (current development)
+release around content encoding and unicode support (part two,
+UTF8 in GET and POST parameters).
+
+=head1 Summary
+
+Starting in the upcoming L<Catalyst> release (holland, which is as of this
+writing dev003 on CPAN, and ready for your testing) Unicode encoding will be
+enabled by default.  In addition we've made a ton of fixes around encoding
+and UTF8 scattered throughout the codebase.
+
+This is part two of a three part series.  In this part we look at how UTF8 works
+for your URL query and form POSTed parameters.
+
+=head1 UTF8 in URL query and keywords
+
+The same rules that we find in URL paths also cover URL query parts.  That is if
+one types a URL like this into the browser (again assuming a modernish UI that
+allows unicode)
+
+	http://localhost/example?♥=♥♥
+
+When this goes 'over the wire' to your application server its going to be as
+percent encoded bytes:
+
+
+	http://localhost/example?%E2%99%A5=%E2%99%A5%E2%99%A5
+
+When L<Catalyst> encounters this we decode the percent encoding and the utf8
+so that we can properly display this information (such as in the debugging
+logs or in a response.)
+
+	[debug] Query Parameters are:
+	.-------------------------------------+--------------------------------------.
+	| Parameter                           | Value                                |
+	+-------------------------------------+--------------------------------------+
+	| ♥                                   | ♥♥                                   |
+	'-------------------------------------+--------------------------------------'
+
+All the values and keys that are part of $c->req->query_parameters will be
+utf8 decoded.  So you should not need to do anything special to take those
+values/keys and send them to the body response (since as we will see later
+L<Catalyst> will do all the necessary encoding for you).
+
+Just like with arguments and captures, you can use utf8 literals (or utf8
+strings) in $c->uri_for:
+
+	use utf8;
+	my $url = $c->uri_for( $c->controller('Root')->action_for('example'), {'♥' => '♥♥'});
+
+When you stringyfy this object (for use in a template, for example) it will automatically
+do the right thing regarding utf8 encoding and url encoding.
+
+	http://localhost/example?%E2%99%A5=%E2%99%A5%E2%99%A5
+
+Since again what you want is a properly url encoded version of this.  Ultimately what you want
+to send over the wire via HTTP needs to be bytes (not unicode characters). 
+
+Remember if you use any utf8 literals in your source code, you should use the
+C<use utf8> pragma.
+
+=head1 UTF8 in Form POST
+
+In general most modern browsers will follow the specification, which says that POSTed
+form fields should be encoded in the same way that the document was served with.  That means
+that if you are using modern Catalyst and serving UTF8 encoded responses, a browser is
+supposed to notice that and encode the form POSTs accordingly.
+
+As a result since L<Catalyst> now serves UTF8 encoded responses by default, this means that
+you can mostly rely on incoming form POSTs to be so encoded.  L<Catalyst> will make this
+assumption and decode accordingly (unless you explicitly turn off encoding...)  If you are
+running Catalyst in developer debug, then you will see the correct unicode characters in 
+the debug output.  For example if you generate a POST request:
+
+	use Catalyst::Test 'MyApp';
+	use utf8;
+
+	my $res = request POST "/example/posted", ['♥'=>'♥', '♥♥'=>'♥'];
+
+Running in CATALYST_DEBUG=1 mode you should see output like this:
+
+[debug] Body Parameters are:
+.-------------------------------------+--------------------------------------.
+| Parameter                           | Value                                |
++-------------------------------------+--------------------------------------+
+| ♥                                   | ♥                                    |
+| ♥♥                                  | ♥                                    |
+'-------------------------------------+--------------------------------------'
+
+And if you had a controller like this:
+
+	package MyApp::Controller::Example;
+	
+	use base 'Catalyst::Controller';
+
+	sub posted :POST Local {
+		my ($self, $c) = @_;
+		$c->res->content_type('text/plain');
+		$c->res->body("hearts => ${\$c->req->post_parameters->{♥}}");
+	}
+
+The following test case would be true:
+
+	use Encode 2.21 'decode_utf8';
+	is decode_utf8($req->content), 'hearts => ♥';
+
+In this case we decode so that we can print and compare strings with multibyte characters.
+		
+
+B<NOTE>  In some cases some browsers may not follow the specification and set the form POST
+encoding based on the server response.  Catalyst itself doesn't attempt any workarounds, but one
+common approach is to use a hidden form field with a UTF8 value (You might be familiar with
+this from how Ruby on Rails has HTML form helpers that do that automatically).  In that case
+some browsers will send UTF8 encoded if it notices the hidden input field contains such a
+character.  Also, you can add an HTML attribute to your form tag which many modern browsers
+will respect to set the encoding (accept-charset="utf-8").  And lastly there are some javascript
+based tricks and workarounds for even more odd cases (just search the web for this will return
+a number of approaches.  Hopefully as more compliant browsers become popular these edge cases
+will fade.	
+
+=head1 Conclusion
+
+Getting utf8 characters from form POSTs and in your URL query should mostly 'do the right
+thing'.  Of course there's a bit of an art to this and we expect that over time we'll
+need to build up a cookbook of practices and workarounds to help even more.
+
+In the final article we we look at how L<Catalyst> does response body encoding, including
+streaming, delayed and filehandle responses.
+
+=head1 Author
+
+John Napiorkowski L<jjnapiork@cpan.org|email:jjnapiork@cpan.org>
+
+=cut

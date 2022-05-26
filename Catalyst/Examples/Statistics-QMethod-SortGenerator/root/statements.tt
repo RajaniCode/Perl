@@ -1,0 +1,16 @@
+[% PROCESS macros.tt %]
+[% WRAPPER page.tt title = c.config.name  %]
+<div class="span-24"> <h1>[% (c.req.params.title || "Q Sort Statements" ) | html %] </h1></div>
+<div id='q_table'>[% make_qnd (d = dist.first) %]</div>
+<hr />
+
+<div class="column span-6 first"> &nbsp;</div>
+<div class="column span-12">
+<ul>
+[% FOREACH x IN statements %] <li> [% x %] </li> [% END %]
+</ul>
+</div>
+<div class="column span-6 last"> &nbsp;</div>
+[% END %]
+
+

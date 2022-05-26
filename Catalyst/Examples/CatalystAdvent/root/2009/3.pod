@@ -1,0 +1,424 @@
+=head1 Creating a simple blog with Catalyst, HTML::FormHandler, and DBIx::Class
+
+=head2 Introduction
+
+L<HTML::FormHandler> is a module for handling forms and HTTP requests
+that includes not only validation rules but, in case of DBIC models, the
+logic to save the model in your database.
+
+I like HTML::FormHandler because of its simplicity, extendability,
+and Moose integration that it provides.
+
+I prefer it over FormFu partly for subjective reasons, but most
+importantly ...
+
+=over
+
+=item *
+
+In HTML::FormHandler, the validation logic is done with validators
+written in Perl, and you can use previously-defined Moose constraints.
+
+
+=item *
+
+HTML::FormHandler gives me the confidence that it's flexible enough
+for any challenge.
+
+=back
+
+This tutorial includes a fairly simple example that provides an
+interface for viewing and editing articles in a blog, using
+HTML::FormHandler for the editing functionality.
+
+=head2 Setting up the project
+
+To start a new project ...
+
+ # catalyst.pl Blog
+
+Let's generate the model:
+
+ perl script/blog_create.pl model DB DBIC::Schema Blog::Schema \
+ create=static components=TimeStamp \
+ 'dbi:Pg:dbname=blog' 'blog' 'blog' '{ AutoCommit => 1 }'
+
+Our articles will be tagged (to make the form processing more
+interesting), so add a model representing tags
+in C<lib/Blog/Schema/Result/Tag.pm>
+
+  package Blog::Schema::Result::Tag;
+
+  use strict;
+  use warnings;
+  use base qw/DBIx::Class/;
+
+  __PACKAGE__->load_components(qw/Core/);
+  __PACKAGE__->table('tags');
+
+  __PACKAGE__->add_columns(
+      tag_id => {
+          data_type => 'integer' ,
+          is_nullable   => 0 ,
+          is_auto_increment => 1
+      },
+      name => {
+          data_type   => 'varchar',
+          size        => 100,
+          is_nullable => 0,
+      },
+  );
+  __PACKAGE__->set_primary_key('tag_id');
+  1;
+  </pre>
+
+Let's also add an Article model
+in C<lib/Blog/Schema/Result/Article.pm>:
+
+  package Blog::Schema::Result::Article;
+
+  use strict;
+  use warnings;
+  use base qw/DBIx::Class/;
+
+  __PACKAGE__->load_components(qw/TimeStamp InflateColumn::DateTime Core/);
+  __PACKAGE__->table('articles');
+
+  __PACKAGE__->add_columns(
+      article_id => {
+          data_type => 'integer' ,
+          is_nullable   => 0 ,
+          is_auto_increment => 1
+      },
+      ts => {
+          data_type     => 'datetime' ,
+          is_nullable   => 1,
+          set_on_create => 1,   
+      },
+      title => {
+          data_type   => 'varchar',
+          size        => 250,
+          is_nullable => 0,
+      },
+      content => {
+          data_type   => 'text',
+          is_nullable => 1,
+      },
+      summary => {
+          data_type   => 'text',
+          is_nullable => 1,
+      },
+      rank => {
+          data_type => 'decimal',
+          size        => [3, 2],
+          is_nullable => 1, 
+      },
+
+  );
+  __PACKAGE__->set_primary_key('article_id');
+  __PACKAGE__->has_many(article_tags => 'Blog::Schema::Result::ArticleTag', 'article_fk');
+  __PACKAGE__->many_to_many(tags => 'article_tags', 'tag');
+
+
+... with a corresponding link table ...
+
+  package Blog::Schema::Result::ArticleTag;
+
+  use strict;
+  use warnings;
+  use base qw/DBIx::Class/;
+
+  __PACKAGE__->load_components(qw/Core/);
+  __PACKAGE__->table('article_tag');
+
+  __PACKAGE__->add_columns(
+      article_fk => {
+          data_type   => 'integer',
+          is_nullable => 0,
+      },
+      tag_fk => {
+          data_type   => 'integer',
+          is_nullable => 0,
+      },
+  );
+  __PACKAGE__->set_primary_key(qw/article_fk tag_fk/);
+  __PACKAGE__->belongs_to(tag => 'Blog::Schema::Result::Tag', 'tag_fk');
+  __PACKAGE__->belongs_to(article => 'Blog::Schema::Result::Article', 'article_fk');
+
+We're almost done setting up our project. Now just deploy your
+schema with a command like this ...
+
+    # perl -I./lib -MBlog::Model::DB \
+         -e " Blog::Model::DB->new->schema->deploy "
+
+Also add this utility to lib/Blog.pm ...
+
+  sub redirect_to_action {
+      my ($c, $controller, $action, @params) =@_;
+      $c->response->redirect($c->uri_for($c->controller($controller)->action_for($action), @params));
+      $c->detach;
+  }
+
+=head2 Creating the CRUD controller
+
+Edit a new file in C<lib/Blog/Controller/Article.pm>:
+
+  package Blog::Controller::Article;
+
+  use strict;
+  use warnings;
+  use parent 'Catalyst::Controller';
+
+  # this class is a HTML::FormHandler class that we'll define below
+  use Blog::Form::Article;
+
+  sub articles : Chained('/') PathPart('article') CaptureArgs(0) {
+      my ($self, $c) = @_;
+      $c->stash->{articles} = $c->model('DB::Article');
+  }
+
+  sub list : Chained('articles') Args(0) {
+      my ($self, $c) = @_;
+      $c->stash->{template} = 'article/list.tt';      
+  }
+
+  sub item : Chained('articles') PathPart('') CaptureArgs(1) {
+      my ($self, $c, $id) = @_;
+
+      $c->error("ID isn't valid!") unless $id =~ /^\d+$/;
+      $c->stash->{item} = $c->stash->{articles}->find($id)
+          || $c->detach('not_found');
+  }
+
+  sub edit : Chained('item') {
+      my ($self, $c) = @_;
+      $c->forward('save');
+  }
+
+  sub add : Chained('articles') {
+      my ($self, $c) = @_;
+      $c->forward('save');
+  }
+
+  # both adding and editing happens here
+  # no need to duplicate functionality
+  sub save : Private {
+      my ($self, $c) = @_;
+
+      # if the item doesn't exist, we'll just create a new result
+      my $item = $c->stash->{item} || $c->model('DB::Article')->new_result({});
+      my $form = Blog::Form::Article->new( item => $item );
+
+      $c->stash( form => $form, template => 'article/save.tt' );
+
+      # the "process" call has all the saving logic,
+      #   if it returns False, then a validation error happened
+      return unless $form->process( params => $c->req->params  );
+
+      # $c->flash->{info_msg} = "Article saved!";
+      $c->redirect_to_action('Article', 'edit', [$item->article_id]);
+  }
+
+  sub not_found : Local {
+      my ($self, $c) = @_;
+      $c->response->status(404);
+      $c->stash->{error_msg} = "Article not found!";
+      $c->detach('list');
+  }
+
+This CRUD is pretty standard, and it would be possible to abstract
+it away in a role (see  L<Catalyst::Manual::CatalystAndMoose/"Controller_Roles">)
+
+=head2 The Editing Form
+
+Let's start with the HTML::FormHandler-derived class
+in C<lib/Blog/Form/Article.pm> looking like this ...
+
+  package Blog::Form::Article;
+
+  use strict;
+  use warnings;
+  use HTML::FormHandler::Moose;
+
+  extends 'HTML::FormHandler::Model::DBIC';
+  with 'HTML::FormHandler::Render::Simple';
+
+  has_field 'title'    => ( type => 'Text',     required => 1 );
+  has_field 'ts'       => ( type => 'Date', label => 'Published Date' );
+  has_field 'content'  => ( type => 'TextArea', required => 0 );
+
+  has_field 'tags_str' => ( type => 'TextArea', required => 0 );
+  has_field 'rank'     => ( type => 'Text',     default => '0.00' );
+
+  1;
+
+... and to make this work, also add the view ...
+
+  # perl script/blog_create.pl view TT TT
+
+... configure the templates path, and add the following file in
+C<root/article/save.tt> ...
+
+  <h1>
+    [% IF item.article_id %]Editing "[% item.title %]"
+    [% ELSE %]Adding a new article[% END %]
+  </h1>
+
+  [% form.render %]
+
+OK, so we now have a form with automatic validation.
+
+=over
+
+=item *
+
+The "title" field is required
+
+=item *
+
+The "published date" field expects the format YYYY-MM-DD. You'd be
+wise to enhance this input with a Javascript widget.
+
+=back
+
+The first problem ... the "tags_str" field is a
+textarea. HTML::FormHandler can work directly with many-to-many
+relationships, but in this case we want the editing to be as
+"free-form" as possible. So we want to specify those tags in a simple
+textarea, separated by commas.
+
+To save the tags, we want Blog::Form::Article to automatically get the
+value, split it in words by ",", create the missing tags, and create
+the necessary links between the article and those tags. We'll just
+append the following to Blog::Form::Article:
+
+  around 'update_model' => sub {
+      my $orig = shift;
+      my $self = shift;
+      my $item = $self->item;
+      
+      $self->schema->txn_do(sub {	
+          $orig->($self, @_);
+  
+          my @tags = split /\s*,\s*/, $self->field('tags_str')->value;
+  
+          $item->article_tags->delete;
+          $item->article_tags->create({ tag => { name => $_ } })
+              foreach (@tags);
+      });
+  };
+
+We have this flexibility, since HTML::FormHandler is based on
+Moose. But we also want it to load the current tags in the textarea
+when the form renders. So we'll just append this:
+
+  after 'setup_form' => sub {
+      my $self = shift;
+      my $item = $self->item;
+
+      $self->field('tags_str')->value(
+          join ', ', 
+          $item->tags->search({}, { order_by => 'name' })->get_column('name')->all
+      );
+  };
+
+=head3 A custom type
+
+Another problem is with the "rank". We want this to be a decimal
+number between 0 and 5. An easy way to do this is with the field
+'range_start' and 'range_end' settings, but we'll demonstrate this 
+with a custom type and additional transformations:
+
+  package Blog::Form::Field::Rank;
+
+  use HTML::FormHandler::Moose;
+  extends 'HTML::FormHandler::Field::Text';
+
+  apply( [
+       { # remove suffix chars
+         transform => sub {
+           my $value = shift;
+           $value =~ s/\w+$//;
+           return $value;
+       }},
+       {
+         transform => sub { $_[0] =~ /^[\d+.]+$/ ? sprintf '%.2f', $_[0] : $_[0] },
+         message   => 'Value cannot be converted to a decimal',
+       },
+       {
+         check => sub { $_[0] =~ /^-?\d+\.?\d*$/ && $_[0] >= 0 && $_[0] <= 5 },
+         message => 'Rank must be a decimal number between 0 and 5'
+       }
+      ]);
+  1;
+
+And then the field declaration in the form class becomes ...
+
+  has_field 'rank' => ( type => '+Blog::Form::Field::Rank', default => '0.00' );
+
+=head3 Auto-generating values
+
+In our example, the Article model has a "summary" field. We want this
+to be autogenerated. I'm sure you can find on CPAN modules for
+doing this, and one stupid way of doing it would be to just delete the
+HTML tags and slice it to 200 chars or something.
+
+So to autogenerate the summary tag, we'll change the 'around "update_model"' in
+C<Blog::Form::Article> as ...
+
+  around 'update_model' => sub {
+
+      # .... <init here> ...
+  
+      $self->schema->txn_do(sub {    
+          $orig->($self, @_);
+
+          # .... < tags saving here > ....  
+  
+          # generates the summary and updates the $item
+          my $summary = generate_symmary($item->content);
+          $item->update({ summary => $summary }) if $summary;
+      });
+  };
+
+You may have noticed schema->txn_do. That's a transaction. If any of
+the method calls in our $changes code-block throws an error, a
+"ROLLBACK" is issued.
+
+B<NOTE:> It would've been better for the summary generation to be
+defined in C<Blog::Schema::Result::Article>, by overriding
+"update". So what I did here is not necessarily a good practice.
+
+=head2 Testing
+
+And we are done. Start your development server with:
+
+    perl script/blog_server.pl -r -d
+
+and go to the following URL ...
+
+    http://localhost:3000/article/add
+
+=head2 Download the project
+
+You can download this sample project with ...
+
+  svn co http://dev.catalystframework.org/repos/Catalyst/trunk/examples/Advent09FormHandlerBlog
+
+=head2 Further Reading
+
+See L<HTML::FormHandler::Manual::Intro> for a more complex example
+with custom validators and notes about template rendering.
+
+Also, check out L<HTML::FormHandler::Manual::Cookbook>,
+L<HTML::FormHandler::Manual::Tutorial> and the other documents in
+L<HTML::FormHandler::Manual>.
+
+=head1 AUTHOR
+
+Alexandru Nedelcu <alex@sinapticode.com>
+
+=head3 COPYRIGHT
+
+Copyright 2009 Sinapticode - L<http://www.sinapticode.com>
+

@@ -1,0 +1,50 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+ <head>
+  <title>[% page.title || page.caption || "CatPaste" %]</title>
+  <meta http-equiv="Content-Language" content="en" />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+[%
+# Add all page.links
+FOREACH link IN page.links;
+    NEXT UNLESS link.href %]
+  <link rel="[% link.rel || 'alternate' %]"
+   [%- IF link.type %] type="[% link.type %]"[% END -%]
+   [%- IF link.title %] title="[% link.title %]"[% END -%]
+   href="[% link.href %]" />[%-
+END;
+
+# Add all stylesheet refs in page.stylesheets
+page.stylesheets = page.stylesheets.unique;
+
+FOREACH stylesheet IN page.stylesheets;
+    NEXT UNLESS stylesheet;
+    stylesheet = stylesheet.match('^http') ?
+                    stylesheet :
+                    static('css/' _ stylesheet, 1); %]
+   <link rel="stylesheet" href="[% stylesheet %]" media="screen"/>[%
+END;
+
+# Add all javascript refs in page.scripts
+page.scripts = page.scripts.unique;
+FOREACH script IN page.scripts;
+    script = script.match('^http') ? script : static('scripts/' _ script, 1); %]
+  <script type="text/javascript" src="[% script %]"></script>[%
+END; %]
+ </head>
+ <!--[if !IE]> <-->
+ <body>
+ <!--><![endif]-->
+ <!--[if IE 5]>
+ <body class="IE IE5">
+ <![endif]-->
+ <!--[if IE 6]>
+ <body class="IE IE6">
+ <![endif]-->
+ <!--[if IE 7]>
+ <body class="IE IE7">
+ <![endif]-->
+  [% content %]
+ </body>
+</html>
+

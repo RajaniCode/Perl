@@ -1,0 +1,6 @@
+<h2>SMALLBOARD IS SMALL</h2>
+|<a href="[% c.uri_for_action('board/create') %]">create a new thread</a> | 
+<p>Recent threads (<a href="[% c.uri_for_action('board/list') %]">view all</a>):</p>
+[% FOR thread IN threads %]
+<div><a href="[% c.uri_for_action("board/view", [thread.thread_id]) %]">[% thread.title %]</a></div>
+[% END %]

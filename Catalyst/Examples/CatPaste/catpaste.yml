@@ -1,0 +1,17 @@
+---
+name: CatPaste
+static_path: /static
+bucket:
+    # Where do we put the files
+    path:  __HOME__/files
+    # Limit before rolling over
+    delete_after: '30 days'
+Model::Schema:
+    connect_info:
+        - dbi:SQLite:__HOME__/db/database.db
+Model::IKC:
+    port: 9990
+    name: "CatPaste"
+    # Where are you posting (IKC::ClientLite->post)
+    channel: Infobot/update
+

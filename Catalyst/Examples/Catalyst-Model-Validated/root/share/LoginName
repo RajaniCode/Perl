@@ -1,0 +1,3 @@
+<a href="[% c.uri_for(c.controller.action_for('view'), [value]) %]">
+  [% value %]
+</a>

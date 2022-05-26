@@ -1,0 +1,131 @@
+=head1 Perl Catalyst in 2014 - The Year in Review (or mostly)!
+
+=head1 Overview
+
+Introduction to Advent 2014 and a review of all the things we accomplished.
+
+=head1 Welcome to Perl Catalyst Advent 2014!
+
+Its that time once again where the Perl hackers and stakeholders of various
+projects come together to congratulates themselves a bit for all the time and
+effort spent over the past year.  So we review a bit, and we try to share our
+knowledge with people that are seeking to learn it.  And we have a bit of fun
+at the same time!
+
+We need to remember that this is a time of year which is traditionally associated
+with giving gifts and receiving them graciously.  But in a larger sense the gifts
+have already been sent along.  Because for those of us involved in Free / Open
+source software, every act of participation is a gift.  Whether you write code,
+fix documentation, submit test reports or just advocate on twitter, blogs, or
+whatever, you are gifting time and effort.  That's in my mind one of the top
+gifts a person can give, since our time is one of our most precious and limited
+resources.  To give that away is a pretty big deal in my book.  And for those
+who choose Free / Open source, well I think its very cool to be part of a
+ethical movement like this whose focus is the betterment of all by working in
+common for those things with are common to all.  Things like Perl, L<PSGI>,
+L<Moose> and of course lets not forget L<Catalyst>!
+
+So lets take a brief spin through the main events for L<Catalyst> in 2014!
+
+=head1 Main accomplishments
+
+Here's a brief rundown of some of the stuff that was added and changed in
+L<Catalyst> in 2014.  This is just the highlights, you should checkout
+the Changes file for more details:
+
+L<https://metacpan.org/changes/distribution/Catalyst-Runtime>
+
+Also note this list highlights new and interesting features, not bugfixes!
+
+=over 4
+
+=item Filehandle Body responses
+
+Previously when you set a filehandle like body response, during body finalization
+we'd manually 'unroll' the filehandle and using the L<Plack> streaming interface.
+This happened at the L<Catalyst> level.  Now we pass the filehandle directly down
+to your choose Plack handler.  This means we can take advantage of optimizations
+at the server level (such as using a non blocking response when using a server
+like L<Twiggy>).  It also means that you can use middleware like
+L< Plack::Middleware::XSendfile> and if your filehandle supports a method ->path
+(see L<IO::File::WithPath> for example) you can allow the webserver to directly
+server the static file, which is likely to be a significant performance improvement.
+This use case is for when you want to server static assests but you want to use
+L<Catalyst> first to do things like check authorization or perform some logging.
+
+This also means if your service supports chunked encoding you will now probably
+stream the file in chunks, so that your client can start to load and render
+pages.
+
+Please note that this change meant that we needed to adopt the PSGI standard
+for filehandle like objects, which is to have a method 'getline' or be a glob.
+Catalyst allowed for a 'read' method.  For now if your filehandle does 'read'
+but not getline, we continue to manually unroll the filehandle and none of the
+above goodies will work as expected.  We have some middleware
+L<Plack::Middleware::AdaptFilehandleRead> to assist in this migration but 
+that has not been integrated into L<Catalyst> yet.
+
+=item Scalar Body responses
+
+If the body response is a scalar we now directly return it to your underlying
+plack server.  Previously we used the streaming interface.  This should be
+somewhat better optimized.
+
+=item Moved some Catalyst Internal code to Middleware layer
+
+The following middleware is now taking the place of once custom L<Catalyst>
+code:  L<Plack::Middleware::ContentLength>, L<Plack::Middleware::ContentLength>,
+L<Plack::Middleware::Head>, L<Plack::Middleware::HTTPExceptions>,
+L<Plack::Middleware::FixMissingBodyInRedirect>, L<Plack::Middleware::MethodOverride>,
+L<Plack::Middleware::RemoveRedundantBody>.
+
+=item Plack::Middleware::HTTPExceptions
+
+If you throw an exception in your Catalyst application tht conforms to the
+L<Plack::Middleware::HTTPExceptions> interface, we then escape Catalyst and
+allow that exception to define the response.  Handy for when you want an easy
+way to return exception responses.
+
+=item Utilities for localize the PSI $env
+
+Since you can now more easily mount other PSGI applications as the response, we
+added some utilities to help localize $env under your controller and/or action
+namespace.  This makes it easier to properly service the URL you are targeting.
+
+=item Stash is now Middleware 
+
+We moved $c->stash to middleware.  This makes it easier to integrate other
+applications under your Catalyst application.  For example you can mount
+another Catalyst application under a controller and share the stash.
+
+=back
+
+=head1 Currently in development
+
+We also have a big upcoming development release where wer expect big fixes
+to UTF8 support and some additional features upgrades to the dispatcher to
+allow you a bit more flexibility in how your routes are put together.
+
+=head1 Summary
+
+2014 continued to be a growth year for L<Catalyst> features and enhancements.
+We continue to lay the groundwork needed in order to make even bigger upgrades
+down the road.  All that is missing is your contributions!
+
+=head1 For More Information
+
+CPAN: L<Catalyst>
+
+Github: L<https://github.com/perl-catalyst/>
+
+Code Repository: L<catagits@git.shadowcat.co.uk:Catalyst-Runtime.git>
+
+Issues: L<https://github.com/perl-catalyst/catalyst-runtime/milestones/holland>
+
+Mailing List Info: L<http://lists.scsys.co.uk/cgi-bin/mailman/listinfo/catalyst>
+
+=head1 Author
+
+John Napiorkowski L<jjnapiork@cpan.org|email:jjnapiork@cpan.org>
+
+=cut

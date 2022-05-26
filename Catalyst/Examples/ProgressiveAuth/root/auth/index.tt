@@ -1,0 +1,18 @@
+<form action="[% c.uri_for( c.controller('Auth').action_for('do_login') ) %]" method="post">
+    <h2>OpenID...</h2>
+    <p>
+        <label for="openid">Enter an OpenID URL:</label>
+        <input type="text" name="openid_identifier" id="openid">
+    </p>
+    <h2>Username and Password</h2>
+    <p>
+        <label for="username">Username:</label>
+        <input type="text" name="username" id="username">
+        <br>
+        <label for="password">Password:</label>
+        <input type="password" name="password" id="password">
+    </p>
+    <p>
+        <input type="submit" value="Login">
+    </p>
+</form>

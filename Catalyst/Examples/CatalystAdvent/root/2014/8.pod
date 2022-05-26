@@ -1,0 +1,56 @@
+=head1 Route matching on URL Scheme 
+
+Matching for HTTP:, HTTPS: (or WS:, WSS:)
+
+=head1 Synopsis
+
+The following controller matches either L<http://localhost/root/scheme>
+or L<https://localhost/root/scheme> and returns the expected body content:
+
+    package MyApp::Controller::Root;
+
+    use base 'Catalyst::Controller';
+
+    sub is_http :Path(scheme) Scheme(http) Args(0) {
+      my ($self, $c) = @_;
+      Test::More::is $c->action->scheme, 'http';
+      $c->response->body("is_http");
+    }
+
+    sub is_https :Path(scheme) Scheme(https) Args(0)  {
+      my ($self, $c) = @_;
+      Test::More::is $c->action->scheme, 'https';
+      $c->response->body("is_https");
+    }
+
+C<uri_for> has had additional smarts built into it to automatically know
+if an action or action chain has a scheme associated with it:
+
+    # Returns http://localhost/root/scheme
+    warn $c->uri_for( $c->controller('Root')->action_for('is_http'));
+
+    # Returns https://localhost/root/scheme
+    warn $c->uri_for( $c->controller('Root')->action_for('is_http'));
+
+=head1 Discussion
+
+You often need to have your application perform one set of actions or another
+depending in the incoming request scheme.  You might for example have part of
+your application secure under https but the rest of it using http.  This new
+action attribute allows you to match as required.
+
+You may use this for all recognized URI Scheme (including websockets schemes).
+
+Lastly, we've improved how C<uri_for> works so that if it notices the specified
+route has an attribute Scheme it will create the correct URL.
+
+=head1 Conclusion
+
+We continue to enhance Catalyst's ability to match different incoming requests
+as well as trying to make it easier to just do the right thing.
+
+=head1 Author
+
+John Napiorkowski L<jjnapiork@cpan.org|email:jjnapiork@cpan.org>
+
+=cut

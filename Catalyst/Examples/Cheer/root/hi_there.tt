@@ -1,0 +1,4 @@
+<html><head><title>Happy winter solstice</title></head>
+<body>And best regards for the new year!  There are [% c.stash.days_till_xmas %]
+days left until santa comes.  </body>
+</html>

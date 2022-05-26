@@ -1,0 +1,78 @@
+=head1 The middleware stash 
+
+=head1 Overview
+
+The stash is now managed via L<Catalyst::Middleware::Stash>.  Why we did this
+and what it enables is the subject of this article.
+
+=head1 Introduction
+
+In the last year we've started to move code out of Catalyst and into middleware.
+There's a number of reasons for this.  First of all it allows us to share (and to
+take advantage of) code across all PSGI development platforms.  I think its a
+cleaner interface that is easier for new programmers to understand.  It also
+enables us to aim to build Catalyst in a more moduler way (for example you could
+someday build a lightweight Catalyst with no stash and without some other
+features in order to strip it down for speed; this approach works well for other
+projects like Apache).
+
+By moving the stash to middleware this mean that the stash is now available to
+applications you mount under your Catalyst controllers (even other Catalyst
+applications.)
+
+The Catalyst stash middleware allows an application to 'inherit' a stash from
+a wrapping application.  This wrapped application can then add to and change the
+stash but when the response 'bubbles up' to the wrapping application the stash
+reverts; its localized properly.
+
+=head1 Example
+
+Lets say you have a <Catalyst> application that defines a controller like this
+
+    package MyAppChild::Controller::User;
+
+    use base 'Catalyst::Controller';
+
+    sub stash :Local {
+      my ($self, $c) = @_;
+      $c->stash->{inner} = "inner";
+      $c->res->body( "inner: ${\$c->stash->{inner}}, outer: ${\$c->stash->{outer}}");
+    }
+
+And you have another L<Catalyst> application that has a controller which 'mounts'
+this first application:
+
+    package MyAppParent::Controller::User;
+
+    use base 'Catalyst::Controller';
+    use MyAppChild;
+
+    sub stash :Local {
+      my ($self, $c) = @_;
+      $c->stash->{outer} = "outer";
+      $c->res->from_psgi_response( MyAppChild->to_app->($c->req->env) );
+    }
+
+If you run the application and issue "GET /user/stash" the result is:
+
+    inner: inner, outer: outer
+
+Since your response is coming from MyAppChild and that application is sharing the stash
+from its 'wrapping' application MyAppParent.
+
+=head1 Discussion
+
+This technique allows you to break up a complex L<Catalyst> application into several
+smaller applications and still share a stash.  It also allows you to share a stash into
+mounted applications (such as if you mount a L<Web::Machine> application under L<Catalyst>)
+or if you are undertaking a major refactor and have two applications side by side.
+
+=head1 More Information
+
+You should review L<Plack::Middleware::> for more details.
+
+=head1 Author
+
+John Napiorkowski L<jjnapiork@cpan.org|email:jjnapiork@cpan.org>
+
+=cut

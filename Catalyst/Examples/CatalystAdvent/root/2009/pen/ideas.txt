@@ -1,0 +1,61 @@
+Slots:
+22  
+23
+24
+
+Articles in progress:
+ - Plack + Catalyst - dhoss
+ - DBIx::Class::InstancePerContext & DBIx::Class::Schema::RestrictWithObject   - zamolxes and dhoss? groditi?
+ - config for beginners (t0m)
+ - cidermail - nine
+
+Articles structure
+  - most writers don't have tuits for big editorials and guides, so concise articles with snippets of code are recommended
+  - introduction: why/when use the technique/module/advice presented here
+  - body: snippets of copy-pasted code, with just enough comments to make it clear (similar to modules SYNOPSYS)
+  - ending: further reading, stuff we didn't include but you should know about, alternatives, caveats
+
+Confirmed ideas:
+  - testing catalyst apps ( aCiD2) 
+  - js grid - jquery/ajax/json/moose roles -  Ian Docherty
+  - database lookup functions working over SOAP  - Ian Sillitoe 
+  - dbic api - nperez (after the 14th)
+  - mojomojo -dandv
+  - querylog - zamolxes (any time now) 
+  - openid - cwest (sat, dec 12)
+  - DBIC::Fixtures - lukes (maybe before 20th Dec, but no promises)
+
+Ideas looking for authors
+  - Catalyst::TraitFor::Model::DBIC::Schema::Caching / DBIx::Class::Cursor::Cached
+  - Catalyst::TraitFor::Model::DBIC::Schema::Replicated / DBIx::Class::Storage::DBI::Replicated
+  
+
+Organising:
+  - Bogdan Lucaciu ( bogdan at sinapticode ro , zamolxes on irc)
+  - Devin Austin (devin.austin at gmail com , dhoss on irc)
+  - Kieren Diment (diment at gmail com , kd on irc)
+
+Editors
+  - Jesse Sheidlower 
+  - heidi jo brandenburg 
+  - Cass Johnston
+
+Volunteers
+  - aristotle - anything :) ( unicode, http, xml whatever) 
+
+
+Done articles
+ - matt's opening article
+ - DBIx::Class::Schema::Versioned - castaway
+ - FBConnect (authentication, API examples ) - Cosmin Budrica
+ - debian + catalyst  - jawnsy
+ - GSoC stuffs - dhoss
+ - Padre::Plugin::Catalyst - garu
+ - Configuration layouts: customizing your app per user/host/env/etc. Wallace Reis (dec 11 )
+ - component traits - caelum
+ - trees in sql - dhoss
+ - DBIx::Class::ResultSet::WithMetaData - lukes (done before 11th Dec)  (dec 12) 
+ - CatalystX::Dispatcher::AsGraph / Template::AsGraph / SQL::Translator::Producer::Diagram  - garu + zamolxes ( dec 14th?)
+ - dbic txns - caelum, dec 15 
+ - dbic multicreate - ribasushi, dec 17
+ - gitalyst - zts

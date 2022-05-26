@@ -1,0 +1,40 @@
+---
+indicator: submit
+auto_fieldset: { legend : 'Person information' }
+
+elements:
+  - type: Text
+    name: name
+    label: Name
+    constraints: 
+      - Required
+
+  - type: Text
+    name: email
+    label: Email
+    constraints: 
+      - Required
+      - Email
+
+  - type: Text
+    name: phone
+    label: Phone
+    constraints: 
+      - Required
+
+  - type: Radiogroup
+    label: Boy or girl? :)
+    name: gender
+    auto_id: "%n_%c"
+    options:
+      - [ 'm', 'M' ]
+      - [ 'f', 'F' ]
+    constraints: 
+      - Required
+
+  - type: Submit
+    name: submit
+    value: OK
+
+constraints:
+  - SingleValue

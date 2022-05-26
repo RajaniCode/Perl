@@ -1,0 +1,96 @@
+=head1 PSGI Environment Utilities 
+
+=head1 Overview
+
+Help to properly localize your $PSGI env
+
+=head1 Introduction
+
+We added a feature to L<Catalyst> that allows you to use the response of another
+Plack type application as your main response.  In order to take better advantage
+of this new feature we added some utility helpers that lets you localize the
+$env under the current controller or action.
+
+=head1 Example
+
+Here's a simple example that uses the bundled Plack static file appliaction to
+serve files under a L<Catalyst> controller;
+
+    package MyApp::Controller::Static;
+
+    use base 'Catalyst::Controller';
+    use Plack::App::File;
+
+    my $app = Plack::App::File->new(root => "static")->to_app;
+
+    sub serve :Path('') Args {
+      my ( $self, $c) = @_;
+      my $env = $c->req->env;
+      $c->res->from_psgi_response($app->($env));
+    }
+
+    1;
+
+=head1 Discussion
+
+This would not work as expected since the C<$env>) passed to the File serving
+application will have "/static/@args" (like /static/favicon.ico, /static/js/app.js)
+as its PATH info.  This means that your directory structure would need to be like
+"./static/static/favicon.ico" or "./static/static/js/apps.js".  It is likely you
+would prefer and expect this to work similiarly to how L<Plack::Builder>'s 
+'mount' works.  This 'localizes' the C<$env> such as to make the underlying
+application think the mounted path is the root path or in other words instead
+of /static/static/favicon.ico you have /static/favicon.ico.
+
+For these cases L<Catalyst> now bundles three utility functions to localize the
+C<$env> under the controller namespace, the action namespace or the current 
+path.  Of the three localizing under the action namespace is the one you are most
+likely to use since it most closely resembles how L<Plack::Builder>'s mount works.
+Lests rewrite the above.
+
+    package MyApp::Controller::Static;
+
+    use base 'Catalyst::Controller';
+    use Plack::App::File;
+    use Catalyst::Utils;
+
+    my $app = Plack::App::File->new(root => "static")->to_app;
+
+    sub serve :Path('') Args {
+      my ( $self, $c) = @_;
+      my $env = $c->Catalyst::Utils::env_at_action;
+      $c->res->from_psgi_response($app->($env));
+    }
+
+    1;
+
+and lets assume you have a directory structure like this:
+
+    /$ROOT
+      /lib
+      /t
+      /static
+        /js
+          app.js
+          jquery.js
+        /css
+          main.css
+          locale.css
+        favicon.ico
+
+Now when you GET localhost://static/js/app.js this will service the file located
+at $ROOT/static/js/app.js
+
+See L<https://metacpan.org/pod/Catalyst::Utils#PSGI-Helpers> for more.
+
+Alternatives include L<Catalyst::Action::FromPSGI> and L<CatalystX::Controller::PSGI>.
+
+=head1 More Information
+
+You should review L<Plack::Middleware::HTTPExceptions> for more details.
+
+=head1 Author
+
+John Napiorkowski L<jjnapiork@cpan.org|email:jjnapiork@cpan.org>
+
+=cut

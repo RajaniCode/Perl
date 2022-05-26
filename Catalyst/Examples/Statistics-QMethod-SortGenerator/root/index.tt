@@ -1,0 +1,22 @@
+[% WRAPPER page.tt title = c.config.name  %]
+<div class="span-24"> <h1>Q sort generator</h1></div>
+<div class="span-18" >
+<p> Paste the Q sort statements into the text box below.  Ensure that
+each statement is separated by a blank line.  We recommend using a
+plain text editor like Notepad on Windows or Text Edit on the Mac as
+word processors (especially Microsoft Word) can cause compatibility
+problems with your web browser.</p>
+<form id="dummy" action="[% c.uri_for('/post_statements') %]" method="post">
+<fieldset>
+<legend>Paste Q Statements Below.  Ensure each statement separated by a blank line.</legend>
+<br />
+<p><input type="submit" value="Submit">
+<input type="reset" value="Reset"></p>
+<p>Title for Q Sort: <br /><input type='text' name='title' size=72 /></p>
+<p><textarea name="statementlist" id="dummy2" rows="50" cols="72" wrap="virtual"></textarea></p>
+</fieldset>
+</form>
+</div>
+[% END %]
+
+

@@ -1,0 +1,17 @@
+span.string { color: #f00; }
+span.variable { color: #00f; font-weight: bold; }
+span.operator { color: #ffa500; }
+span.warning { color: #00f; font-weight: bold; font-style: italic; }
+span.error { color: #f00; font-weight: bold; font-style: italic; }
+span.reserved { color: #9b30ff; font-weight: bold; }
+span.region_marker { color: #96b9ff; font-style: italic; }
+span.keyword { font-weight: bold; }
+span.char { color: #f0f; }
+span.comment { color: #7f7f7f; font-style: italic; }
+span.datatype { color: #00f; }
+span.decval { color: #00007f; }
+span.function { color: #007f00; }
+span.istring { color: #f00; }
+span.others { color: #b03060; }
+span.alert { color: #00f; }
+

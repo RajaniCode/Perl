@@ -1,0 +1,13 @@
+cpan, cpanm, cpanp
+
+CPAN.pm (cpan) [http://search.cpan.org/~andk/CPAN-2.14/lib/CPAN.pm] is the original client. It comes with Perl, so you already have it. It has the most features. It has a lot of configuration options to customize the way it works.
+
+Its biggest limitation is its configuration. Although recent versions have improved it, it used to ask a lot of questions before you could start installing modules. People new to Perl might not know the right answers.
+
+cpanminus (cpanm) [http://search.cpan.org/~miyagawa/App-cpanminus-1.7042/lib/App/cpanminus.pm] is an attempt to make a zero-configuration client that automatically does the right thing for most users. It's also designed to run well on systems with limited resources (e.g. a VPS). It doesn't come with Perl, but it's easy to install. It integrates easily with local::lib.
+
+Its biggest limitation is its lack of configuration. If you want to do something unusual, it may not support it.
+
+CPANPLUS (cpanp) [http://search.cpan.org/~bingos/CPANPLUS-0.9162/lib/CPANPLUS.pm] is an attempt to make a CPAN API that Perl programs can use, instead of an app that you use from the command line. The cpanp shell is more of a proof-of-concept, and I don't know of any real advantages to using it.
+
+In summary, I'd recommend either cpan or cpanm. If you have trouble configuring cpan, try cpanm. If your situation is unusual, try cpan.

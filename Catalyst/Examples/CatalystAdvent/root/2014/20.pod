@@ -1,0 +1,111 @@
+=head1 Application-wide access to the context ($c) for the impatient
+
+=head1 Overview
+
+MVC is a proven development pattern, and its rules and best practices are certainly worthwhile.
+Still, sometimes you just want to get at C<$c> from the outside of controller code, and 
+don't want to fuss with passing it around in argument lists.
+
+Isn't there an easier way to just DWIW when I'm in a hurry?
+
+
+=head1 stuff $c in a localized global
+
+Sometimes you just need a global variable. By making use of the
+L<local|http://perldoc.perl.org/functions/local.html> keyword, global 
+variables can be isolated to a particular scope. We're going to 
+use this technique to "localize" a reference to C<$c> to be globally accessible, but only within 
+the scope of the request it applies to.
+
+First, we need to declare a package/global variable someplace. Your main app class is a 
+good choice (as shown below), but it could be anywhere.
+
+ package MyApp;
+ use Catalyst;
+ 
+ # ...
+ 
+ our $__ACTIVE_CTX = undef;
+ sub ctx { $__ACTIVE_CTX }
+
+I also like to create a nice, clean accessor method (C<< ->ctx >> as shown above) to use instead of 
+accessing the variable directly. This will enable us to get $c from anyplace like this:
+
+ my $c = MyApp->ctx;
+
+Which is exactly equivalent to:
+
+ my $c = $MyApp::__ACTIVE_CTX;
+
+Now we just need to hook into the right place to capture C<$c> and localize it into our global 
+variable. 
+
+The Catalyst C<dispatch()> method provides the obvious choice. It is called immediately after $c 
+is constructed by C<prepare()> and is the gatekeeper for each request. All the processing that 
+happens during a normal request cycle is ultimately contained within the dynamic scope of the 
+C<dispatch()> method.
+
+We can wrap this logic very easily with an around modifier and localize our variable:
+
+ around 'dispatch' => sub {
+   my ($orig, $c, @args) = @_;
+   local $__ACTIVE_CTX = $c;
+   $c->$orig(@args)
+ };
+
+Now, throughout your application you will be able to access the context object simply by calling
+C<< MyApp->ctx >> which will work within any code in any class so long as it is called during a 
+request. This includes Models, but also other general perl packages/modules that you may call out 
+to, such as L<DBIC|DBIx::Class> result classes.
+
+=head1 Outside of a request
+
+Since L<Catalyst> is a web framework, most code is generally expected to be called during a request, 
+but not always. There are plenty of other possible scenarios, such as admin scripts, cron jobs, etc
+that won't touch the dispatch machinery. For these cases, our C<< ->ctx() >> method will simply 
+return C<undef> since that is what we set it to when we declared it. By using C<local> to set the 
+value, it is isolated to that dynamic scope and remains undef from the perspective of everywhere 
+else. So, we don't have to worry about stale data, exceptions/interruptions, and so on. When the 
+request ends and C<dispatch()> returns, the localized version of the variable goes out of scope and
+ceases to exist.
+
+This provides a reasonable degree of confidence that our C<< ->ctx() >> method will always return the 
+correct context object when a request is in progress, and false/undef when it is not.
+
+In your code, you should always handle both cases with conditional logic, even if you only expect 
+to be called during a request. For instance:
+
+
+ if ( my $c = MyApp->ctx ) {
+   # do stuff specific to web request, apply permissions, etc
+   # ...
+ }
+ else {
+   # do stuff specific to non-requests
+   # Maybe die if that should not happen/be allowed
+   # Maybe skip permission logic, logging, etc
+   # ...
+ }
+
+In many cases this can also be as simple as:
+
+ my $c = MyApp->ctx or die "Not in a request!";
+
+This is at least better/more descriptive than the "can't call method on undefined value" type
+exception you'll get if you simply assume you're in a request and blindly try to use $c.
+
+
+=head1 Caveats
+
+This should be filed under the category of "quick and dirty" and is still not recommended to be
+your first design choice. It is handy for getting stuff working quickly and in a pinch.
+
+Also, note that this should B<not> be expected to work under async scenarios -- only when you are deploying
+with standard synchronous worker threads.
+
+
+=head1 Author
+
+Henry Van Styn L<vanstyn@cpan.org|email:vanstyn@cpan.org>
+
+=cut

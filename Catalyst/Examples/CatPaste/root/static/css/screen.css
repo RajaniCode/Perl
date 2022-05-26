@@ -1,0 +1,14 @@
+body {
+    font-family: "Lucida Grande", Verdana, Arial, sans serif;
+}
+
+img { border: none; }
+
+#footer {
+    font-size: 72.5%;
+    text-align: center;
+    color: #777;
+}
+
+.paste div label { display: block; padding-top: 10px; }
+.paste textarea { margin: 1em 0; }

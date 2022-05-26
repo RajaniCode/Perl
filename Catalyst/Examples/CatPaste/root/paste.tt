@@ -1,0 +1,6 @@
+[%~
+IF paste;
+    PROCESS "paste/view.tt";
+ELSE %]
+    <h3 class="error">Sorry, we could not find the paste requested.</h3>
+[% END %]

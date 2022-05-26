@@ -1,0 +1,198 @@
+=head1 Porting Reddit's URL Structure to Catalyst Using Chaining
+
+=head2 Overview
+
+When writing documentation and tutorials, it is very difficult not to bias youself towards contrived examples that
+conventiently avoid edge cases; or even not so edgey cases that don't lend themselves so easily to your model.
+
+This tutorial seeks to do the opposite: take a URL that exemplifies some common cases where Chaining isn't as straightforward.
+
+Reddit's URL structure has a pretty straightforward hierarchy, but requires some branching of the Chaining model to port to Catalyst.
+
+Take a URL like: L<http://www.reddit.com/r/perl/comments/2c7y5p/perl_in_one_image/cjczh8b>
+
+It's a link to a L<comment|http://www.reddit.com/r/perl/comments/2c7y5p/perl_in_one_image/cjczh8b> on a
+L<post|http://www.reddit.com/r/perl/comments/2c7y5p/perl_in_one_image> in a
+L<subreddit|http://www.reddit.com/r/perl> on L<reddit|http://www.reddit.com>.
+
+Each part of the URL has hierarchical significance as well as resoving to a resource:
+
+=over 2
+
+=item B<http://www.reddit.com/>                                                  -> homepage
+
+=item B<http://www.reddit.com/r>                                                 -> redirect to /subreddits
+
+=item B<http://www.reddit.com/r/perl>                                            -> homepage for $subreddit
+
+=item B<http://www.reddit.com/r/perl/comments>                                   -> browse comments for $subreddit
+
+=item B<http://www.reddit.com/r/perl/comments/2c7y5p>                            -> comments page for a post
+
+=item B<http://www.reddit.com/r/perl/comments/2c7y5p/perl_in_one_image>          -> comments page for a post
+
+=item B<http://www.reddit.com/r/perl/comments/2c7y5p/perl_in_one_image/cjczh8b>  -> permalink for a specific comment
+
+=back
+
+Trying to port this to Catalyst, the things that stick out are:
+
+How do you have a URL that Actions chain off of but also is an endpoint itself? ( pretty much every URL above )
+
+How do you represent a URL like '/r/perl/comments/2c7y5p/perl_in_one_image/cjczh8b' where the last three path parts are dynamic, without
+cheating and just having Args(3) do a custom dispatch?
+
+The resulting app is at L<repo|https://github.com/ediblenergy/Reddit-PP-Web>, and the important bits are below.
+
+=head1 Synopsis
+
+Packages are in separate files, but mushed together here for brevity.
+
+    package Reddit::PP::Web::Controller::Root;
+
+    #/ midpoint
+    sub base : CaptureArgs(0) : PathPart('') : Chained('/') { ...
+
+    #/ endpoint
+    sub base_index : Args(0) : PathPart('') : Chained('base') { ...
+
+    package Reddit::PP::Web::Controller::Subreddit;
+
+    # /r/$subreddit_name midpoint
+    sub base : CaptureArgs(1) : PathPart('r') : Chained('/root/base') { ...
+
+    # /r endpoint (redirect)
+    sub base_index : Args(0) : PathPart('') : Chained('base') { ...
+
+    package Reddit::PP::Web::Controller::Subreddit::Comments;
+
+    # /r/$subreddit_name/comments midpoint
+    sub base : CaptureArgs(0) : PathPart('comments') : ChainedParent { ...
+
+    # /r/$subreddit_name/comments endpoint
+    sub browse : Args(0) : PathPart('') : Chained('base') { ...
+
+    # /r/$subreddit_name/comments/$post_id endpoint
+    sub view : Args(1) : PathPart('comments') : Chained('/subreddit/base') { ...
+
+    # /r/$subreddit_name/comments/$post_id/$post_canonical_title midpoint
+    sub with_title_base : CaptureArgs(2) : PathPart('comments') :
+        Chained('/subreddit/base') { ...
+
+    # /r/$subreddit_name/comments/$post_id/$post_canonical_title endpoint
+    sub with_title : Args(0) : PathPart('') : Chained('with_title_base') { ...
+
+    # /r/$subreddit_name/comments/$post_id/$post_canonical_title/$comment_id endpoint
+    sub permalink_view : Args(1) : PathPart('') Chained('with_title_base') { ...
+
+=head3 Action summary
+
+=for xhtml <pre>
+
+    [debug] Loaded Chained actions:
+
+    ----------------------+-------------------------------------------
+    Path Spec             | Private
+    ----------------------+-------------------------------------------
+    /                     | /root/base (0)
+                          | => /root/base_index
+    /r/*                  | /root/base (0)
+                          | -> /subreddit/base (1)
+                          | => /subreddit/base_index
+    /r/*/comments         | /root/base (0)
+                          | -> /subreddit/base (1)
+                          | -> /subreddit/comments/base (0)
+                          | => /subreddit/comments/browse
+    /r/*/comments/*/*/*   | /root/base (0)
+                          | -> /subreddit/base (1)
+                          | -> /subreddit/comments/with_title_base (2)
+                          | => /subreddit/comments/permalink_view
+    /r/*/comments/*       | /root/base (0)
+                          | -> /subreddit/base (1)
+                          | => /subreddit/comments/view
+    /r/*/comments/*/*     | /root/base (0)
+                          | -> /subreddit/base (1)
+                          | -> /subreddit/comments/with_title_base (2)
+                          | => /subreddit/comments/with_title
+    ----------------------+-------------------------------------------
+
+=for xhtml </pre>
+
+=head1 Configuration Description
+
+=head2 Args, CaptureArgs
+
+If you notice, every L<Action|https://metacpan.org/pod/Catalyst::Action> with B<Args> is marked as an 'endpoint,'
+and every Action with B<CaptureArgs> is marked as a 'midpoint.'
+
+The L<Catalyst::DispatchType::Chained|https://metacpan.org/pod/Catalyst::DispatchType::Chained>
+doc currently refer to what I'm calling midpoints as "The path parts that aren't endpoints."
+
+A midpoint does not get a URL. You can think of it as a private method in your Web App.
+An endpoint does get a URL, it's like a public method that is actually open to the public - if your webapp is on the internet.
+
+=head2 PathPart
+
+PathPart is conceptually pretty simple to understand. It is the part of the URL routed to this Action. The default is the Action name itself.
+Really you'll see three types of arguments to PathPart
+
+Not having it present at all: same URL as the name of the Action.
+
+Present with a string: ex - base : CaptureArgs(0) : PathPart('comments')
+
+Specify that you want 'comments' to match, not 'base.'
+
+Zero width string: Match based on what the Action is chained to: ex - base_index : Args(0) : PathPart('') : Chained('base')
+
+Specify that you want to match on the same URL as 'base.'
+
+=head2 Chained, ChainedParent
+
+Chained specifies what action to attach to. Without a leading slash it will search the same Controller as that Action.
+
+With a leading slash it will resolve the 'absolute' path of the Action.
+
+ChainedParent just means chain to the Action with the same name as this Action, but one level up:
+
+    sub base : CaptureArgs(0) : PathPart('comments') : ChainedParent { ...
+
+=head2 Notes
+
+=head3 Some common Catalyst practices used in this App
+
+Naming the top level midpoint Action in a Controller 'base' and top level endpoint action 'base_index' is a pretty common
+way of distinguishing those Actions.
+
+Naming the top level Controller 'Root' to represent '/' The naming refers to the root of the path, it's not some super controller that will
+sudo make you a sandwich.
+
+Using a Controller per significant PathPart is not strictly neccesary; the whole App could be defined in the 'Root' Controller,
+but defining ::Subreddit and ::Subbredit::Comments will allow for much cleaner Controllers later on as the code base grows and ages.
+
+=head3 Some uncommon Catalyst practices used in this App
+
+Having an init method in Web.pm  where __PACKAGE__->setup and __PACKAGE__->meta->make_immutable are called,
+rather than having it just at the bottom makes it a little more verbose in the plackup script
+( you need to call Reddit::PP::Web->init manually ) but allows for easier injection of dependencies and/or config ( ex:
+Reddit::PP::Web->init({ path_to_templates => '$FindBin::Bin/../root", configuration => $myconfig->{catalyst} })
+
+    use base 'Catalyst::Controller'
+    use Moose
+
+instead of extends 'Catalyst::Controller' allows you to use attributes without a hideous
+BEGIN {} block in your Controllers.
+
+=head2 See Also
+
+L<https://metacpan.org/pod/Catalyst::DispatchType::Chained>
+
+
+=head1 Author
+
+L<Samuel Kaufman|https://metacpan.org/author/SKAUFMAN>
+
+=begin xhtml
+
+<a href="https://github.com/ediblenergy/Reddit-PP-Web"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://camo.githubusercontent.com/567c3a48d796e2fc06ea80409cc9dd82bf714434/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f6c6566745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_left_darkblue_121621.png"></a>
+
+=end xhtml

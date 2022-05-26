@@ -1,0 +1,114 @@
+This application provides an environment with which to configure and
+test authentication stores for the "New" authentication API ( versions
+>= 0.1).
+
+At present, there is a config file for the Minimal store, and for the
+DBIx::Class store.  To use either of these make a symbolic link of the
+config file you want to test to myauthapp.conf and then run prove -l
+t.  As far as I know the test coverage is complete.
+
+The authentication/authorization database schema is based on the
+schema in Catalyst::Authentication::Store::DBIx::Class.
+
+TODO
+====
+
+* Write config files for more auth stores (especially OPENID)
+* Write a script to $schema->deploy to another DSN (or even an sql
+  file of the right syntax)
+
+
+OPENID Notes
+============
+
+some IRC transcript:
+
+07:36 < shadowpaste> "marcus" at 212.251.165.156 pasted "how I did openid with 
+                     new style auth, in case anyone else needs it" (45 lines) 
+                     at http://scsys.co.uk:8001/14905
+
+Paste ---> 
+sub openid : Global {
+    my ($self, $c ) = @_;
+    eval {
+        if ($c->authenticate({},'openid')) {
+            if (my $user=$c->find_user({openid=>$c->user->{url},'dbic'})) {
+                $c->set_authenticated($user,'dbic');
+                return $c->res->redirect($c->uri_for('/feed',$user->obj->screenname));
+            }
+            my $openid:Stashed=$c->user->{url};
+            $c->logout;
+        }
+        elsif (! @{$c->error}) {
+            return if $c->res->redirect;
+            $c->res->redirect($c->uri_for('/login',{openid_failed=>1}));
+        }
+    };
+    if ($@) {
+        $@ =~ s/\sat\s\S+\sline\s\d+$//;
+        $c->stash->{openid_alert} =  $@;
+        $c->error(0);
+        $c->detach('login');
+    }
+    
+}
+
+# config 
+
+authentication:
+    default_realm: dbic
+    realms:
+        dbic:
+            credentail: 
+                class: Password
+                password_field: password
+                password_type: crypt
+            store:
+                class: DBIx::Class
+                user_class: 'DBIC::Person'
+                id_field: screenname
+        openid:
+            credential:
+                class: OpenID
+            store:
+                class: Null
+
+
+# although personally I'll shoot marcus for using YAML ranther than Config::General :-\
+
+
+07:39 <@marcus> the way I had to do it is the same way I did it with old auth
+07:36 < shadowpaste> "marcus"  [see above]
+07:37 <@marcus> I just nopasted my code tho
+07:38 <@marcus> so feel free to hack that into newstyle auth
+07:39 <@marcus> the way I had to do it is the same way I did it with old auth
+07:40 <@marcus> auth against a null store, and then manually check DBIC and set 
+                the apropriate user as authenticated
+07:40 <@kd> so is sub openid : Global { is in Controller::Root?
+07:41 <@marcus> Controller::User in my site
+07:41 <@marcus> but doesn't really matter
+07:42 <@marcus> the way this works is if you manage to auth, and you have the 
+                user in dbic, we set you as authenticated and redirect
+07:42 <@marcus> if you manage to auth and not, we have to present a template to 
+                let you tie openid to a local user or register a user
+07:42 <@marcus> if you can't auth, we redirect you back to login
+07:43 <@kd> sounds like a separate example then
+07:44 <@marcus> well, using openid without a local dbic user seems far fetched 
+                to me for 99% of the use cases
+07:44 <@kd> yep
+07:44 <@kd> maybe I'll paste this transcript into the README and cal it 90% done
+07:44  * kd has test coverage :D
+07:44 <@marcus> :D
+07:45 <@marcus> when I found the null store, things went better
+07:45 <@marcus> it should probably be included in the synopsis for 
+                Credential::OpenID
+07:46 <@marcus> but of course, that module is not hosted in our trunk :/
+07:46 <@kd> yes, quite
+07:47 <@kd> can we get someone who speaks japanese to persuade the developer to 
+            take a cat repo commit bit?
+07:47 <@kd> seen miyagawa?
+07:47 <@purl> miyagawa was last seen on #catalyst 7 days ago, saying: less 
+              scary than awstats anyway ;)  [Apr 24 01:14:29 2008]
+07:47 <@marcus> the first part of the synopsis doesnt declare at store at all, 
+                andthe one further down specifies a bogus "OpenID" store
+07:44 <@kd> yep

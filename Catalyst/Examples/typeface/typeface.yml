@@ -1,0 +1,62 @@
+---
+name: Typeface
+
+using_frontend_proxy: 0
+proxy_reply_as: 'http://letsgetdugg.com/'
+
+site:
+    template: 'default'
+    name:  'Lets Get Dugg!'
+    description: 'my personal blog'
+
+Model::Typeface:
+    schema_class: 'DB::Typeface::Schema'
+    connect_info:
+        - dbi:Pg:dbname=letsgetdugg;host=fab40;user=;password=
+
+View::JSON:
+    json_driver: JSON::Syck
+
+captcha:   
+    session_name: 'captcha_string'    
+    create:
+      - normal
+      - rect
+    new:
+      thickness: 2
+      height: 80
+      lines: 1
+      width: 220
+    out:
+      force: 'jpeg'
+    particle:
+      - 100
+      
+cache:
+    backend:
+        store: 'FastMmap'
+        # share_file: '/tmp/typeface'
+                
+authentication:
+    dbic:
+        user_class: 'Typeface::Users'
+        user_field: 'name'
+        password_field: 'password'
+        password_type: 'clear'
+
+page_cache:
+    set_http_headers: 1
+    expires: 86400
+    auto_check_user: 1
+    auto_cache:
+        - '/view/.*'
+        - '/'
+        - '/category/.*'
+        - '/archived/.*'
+        - '/page/.*'
+    debug: 0
+
+session:
+    expires: 3600
+    storage: '/tmp/sessions'
+

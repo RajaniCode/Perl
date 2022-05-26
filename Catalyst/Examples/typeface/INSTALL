@@ -1,0 +1,15 @@
+Installation:
+	1) Run MakeFile.PL to install all dependencies.
+	2) Rim create_sql.pl and import the generated SQL schema.
+	3) Edit typeface.yml to suit your needs.
+	4) Run create_login.pl
+	5) Run script/typeface_server.pl -p 8080
+	6) Login into http://localhost:8080/
+	7) There is no step 7.
+
+
+Use CPAN it's your friend! The only dependency you might have an issue with is Captcha. Captcha depends on GD which is problematic on OSX. If you already have Catalyst installed everything should go smooth as butter.
+
+If you can't get this working you suck at the internet! [sic]
+
+-Victor

@@ -5,3 +5,6 @@
 .precomp
 lib/.precomp
 
+# macOS
+.DS_Store
+__MACOSX

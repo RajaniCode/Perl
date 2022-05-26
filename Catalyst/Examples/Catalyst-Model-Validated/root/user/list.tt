@@ -1,0 +1,26 @@
+<a href="[% c.uri_for(c.controller.action_for('create')) %]">
+  create new user
+</a><br/>
+<table>
+<tr>[%
+
+FOREACH field IN c.model.public_fields.keys;
+  '<th>'; field; '</th>';
+END;
+
+"</tr>\n";
+
+list = c.model.list;
+
+WHILE (user = list.next);
+  '<tr>';
+  FOREACH field IN c.model.public_fields.keys;
+    type = c.model.public_fields.$field;
+    '<td>'; INCLUDE "share/$type" value = user.$field; '</td>';
+  END;
+  "</tr>\n";
+END;
+
+"</table>\n";
+
+%]

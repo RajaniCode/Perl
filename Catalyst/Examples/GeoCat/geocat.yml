@@ -1,0 +1,11 @@
+---
+name: GeoCat
+default_view: TT
+View::TT:
+    TEMPLATE_EXTENSION: '.tt'
+google:
+# keyfor localhost:3000
+   apikey: 'ABQIAAAAh3LqwY1XU3ldEkDJBxe4hBTJQa0g3IQ9GZqIMmInSLzwtGDKaBTpDw96VtukdWhnEZVyby85gUgJSA'
+# key for localhost
+#   apikey: "ABQIAAAAh3LqwY1XU3ldEkDJBxe4hBT2yXp_ZAY8_ufC3CFXhHIE1NvwkxTz_vK_MxtAQetI990enKf6YEthTA"
+

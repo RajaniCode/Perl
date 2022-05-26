@@ -1,0 +1,25 @@
+ 
+<h2>[% thread.title %]</h2>
+<div>[% thread.content %]</div>
+<div><a href="[% c.uri_for_action('board/reply', [thread.thread_id]) %]">reply</a></div>
+<p>Replies:</p>
+
+[% BLOCK replies %]
+[% DEFAULT recurse=0 %]
+<div><a href="[%c.uri_for_action('board/view', [ reply.thread_id ]) %]">[% reply.title %]</a> - <a href="[% c.uri_for_action('board/reply', [ reply.thread_id ] ) %]">post a reply</a></div>
+  [% IF recurse %]
+    [% FOR subreply IN reply.children %]
+      <ul>
+        <li>
+         [% INCLUDE replies reply = subreply %]
+        </li>
+      </ul>
+    [% END %]
+  [% END %]
+[% END %]
+
+<ul>
+[% FOR reply IN thread.children %]
+[% PROCESS replies recurse=1 %]
+[% END %]
+</ul>
