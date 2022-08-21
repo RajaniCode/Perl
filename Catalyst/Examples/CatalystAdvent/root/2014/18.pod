@@ -1,0 +1,72 @@
+=head1 Redispatching to a public path
+
+=head1 Overview
+
+Catalyst provides well-known dispatch API methods such as C<< $c->forward >>, 
+C<< $c->go >> and C<< $c->visit >> to call/jump to from one controller action to 
+another from within controller code. However, these methods only accept private, 
+internal path arguments which could be completely different from the actual, publicly 
+exposed URL paths. This is especially true for applications with complex dispatch 
+logic, such as when C<:Chained> and C<:Regex> dispatch types are in play.
+
+If you need to be able to resolve the controller action associated with a real, 
+public URL, there isn't any straightforward way to do it. This actually makes sense 
+when you think about; dispatch rules apply to the request as a whole (not just the 
+URL), so the only way to observe the ultimate result of a fresh request from the 
+outside is to actually perform one.
+
+In many cases where this would come up you can just call 
+C<< $c->response->redirect($public_url) >>, which simply tells the client to make a 
+new request. If this isn't an option, and you really need to do it within the same 
+request, there are ways to "fake it" and get I<reasonably> close to what it would be.
+
+=head1 A public redispatch recipe 
+
+Since dispatch logic applies to a request, you must either create a new, simulated 
+request object, or modify the existing request object for the new URL you want to 
+dispatch to. The following method does the latter, along with some extra string 
+normalization (copied from L<RapidApp> code base):
+
+
+  sub redispatch_public_path {
+    my ($c, @args) = @_;
+    
+    my $path = join('/',@args);
+    $path =~ s/^\///; #<-- strip leading /
+    $path =~ s/\/$//; #<-- strip trailing leading /
+    $path =~ s/\/+/\//g; #<-- strip any double //
+    $path ||= '';
+    
+    $c->log->debug("Redispatching as path: $path") if ($c->debug);
+    
+    # Overwrite the 'path' in the request object:
+    $c->request->path($path);
+    
+    # Now call prepare_action again, now with the updated path:
+    $c->prepare_action;
+    
+    # Now forward to the new action. If there is no action,
+    # call $c->dispatch just for the sake of error handling
+    return $c->action ? $c->forward( $c->action ) : $c->dispatch;
+  }
+
+
+=head1 Caveats
+
+Keep in mind that this is only a I<simulated> public redispatch because the idea of 
+a I<real> redispatch - without a real request - doesn't actually make sense. You can't 
+know the result of a request that didn't happen just like you can't know if 
+Schrodinger's cat is still alive without opening the box.
+
+Before using this code, you should take a step back and ask yourself if you actually 
+really need it. There is a good chance the better solution is to rethink the aspects 
+of your design that led you to want to do it in the first place. There are legitimate 
+reasons to do this in certain situations (otherwise I wouldn't even be writing this 
+article), but it should never be your first choice.
+
+
+=head1 Author
+
+Henry Van Styn L<vanstyn@cpan.org|email:vanstyn@cpan.org>
+
+=cut

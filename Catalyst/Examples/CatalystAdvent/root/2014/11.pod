@@ -1,0 +1,187 @@
+=head1 Callbacks and streaming to reduce memory usage.
+
+At $work we were looking into some memory issues when we noticed that every now and then we'd spot  one of the workers had gone from the normal 120mb memory usage to 1.2gb
+
+We did some investigating and it turned out our 8mb csv feeds were using a ridiculous amount of memory to be generated. I went and made a brew, and came back with a plan.
+
+=head2 Quick overview
+
+We have a custom view that outputs csv that's pretty much as follows
+
+    package MyApp::View::CSV;
+    use Moose;
+    use namespace::autoclean;
+
+    extends 'Catalyst::View';
+
+    use Text::CSV_XS;
+
+    sub csv {
+        return Text::CSV_XS->new({ binary => 1, auto_diag => 1, eol => "\n" });
+    }
+
+    sub process {
+        my ($self, $c) = @_;
+
+        $c->res->headers->header('Content-Type' => 'text/csv');
+
+        my $data = $c->stash->{csv_data};
+        my $header = $c->stash->{csv_header};
+
+        my $csv = $self->csv;
+
+        my $output = '';
+        if( $header ) {
+            $csv->combine( @$header ) or die "Could not generate row data: ".$csv->error_diag."\n";
+            $output .= $csv->string;
+        }
+
+        foreach my $row ( @$data ) {
+            my @csv_row;
+
+            if( ref($row) eq 'HASH' ) {
+                die "You need to define csv_header to use this" unless $header;
+                @csv_row = map { $row->{$_} } @$header;
+            } else {
+                @csv_row = @$row;
+            }
+
+            $csv->combine( @csv_row ) or die "Could not generate row data: ".$csv->error_diag."\n";
+            $output .= $csv->string;
+        }
+
+        $c->res->body( $output );
+
+        return 1;
+    }
+
+    __PACKAGE__->meta->make_immutable;
+
+and a few controller actions that do something along the lines of
+
+    sub index: GET Chained(base) Args(0) {
+        my ( $self, $c ) = @_;
+
+        my @csv_rows;
+        foreach my $product ( $c->model('DB::Product')->for_feed(['In Stock','Due In']) ) {
+            push @csv_rows, {
+                foo => $product->foo,
+                bar => $product->bar,
+                # and so on
+            };
+        }
+
+        $c->stash(
+            csv_header  => [qw/foo bar etc so on/],
+            csv_data    => \@csv_rows,
+        );
+    }
+
+
+ok, in the controller action, we build an array of rows that have 100+ columns (legacy ftw) and join quite a few tables. Not too mention there's a couple of thousand rows. That's using up a large chunk of memory, and is partly responsible for the massive memory use.
+
+In the view, we loop through the array, convert it to csv, and append it to the $output scalar. Then, once we're finished, we write the whole thing out via $c->res->body. This is another very memory intensive operation, and since the massive array is still in scope, it all adds up to about 1.1gb, that is never freed back the os, because that's what perl does. And I don't know about you, but when i see 1.1gb being used for no reason, I think that's bug in my code.
+
+=head2 Solution
+
+There's two problems, so lets fix them one at a time
+
+=head3 The view
+
+Creating each row and appending it to a string is very memory expensive, but luckily for us Catalyst::Response has a method that will allow us to stream the output, row by row. so we change the lines
+
+    $output .= $csv->string;
+
+to 
+
+    $c->res->write( $csv->string );
+
+we have already saved a massive 8mb of memory (that's the size of the csv), maybe twice, I dunno, but I do know it was an easy fix that scales well.
+
+=head3 The controllers
+
+The real memory hog is the array we create in the controllers, but how else can we have the code in the controllers, but have the data in the view? Callbacks. Now bear with me, it's not a dirty word as it sounds, not if done correctly.
+
+One important thing to note with callbacks and catalyst is, it's really easy to to create a circular reference, aka a memory leak. so if you don't know what that is, or what a weak reference is, go read this first. L<http://perldoc.perl.org/perlref.html#Circular-References>
+
+lets change the controller action to create a callback instead creating an array, and the callback will receive another callback, as it's first argument, that will do the csv conversion and writing
+
+    sub index: GET Chained(base) Args(0) {
+        my ( $self, $c ) = @_;
+
+        my $rs = $c->model('DB::Product')->for_feed(['In Stock','Due In']);
+        my $cb = sub {
+            my ( $csv ) = @_;
+
+            # if you use $c in here, because it's going in $c->stash, you _/WILL/_ create a memory leak. be careful
+
+            #using next instead of all is much more memory efficient, as you're only creating one row at a time,
+            # rather than all of them then looping through
+            while ( my $product = $rs->next ) {
+                $csv->( {
+                    foo => $product->foo,
+                    bar => $product->bar,
+                    # and so on
+                } );
+            }
+        };
+
+        $c->stash(
+            csv_header  => [qw/foo bar etc so on/],
+            csv_cb      => $cb,
+        );
+    }
+
+and lets change the view to work with the callback
+
+    sub process {
+        my ($self, $c) = @_;
+
+        $c->res->headers->header('Content-Type' => 'text/csv');
+
+        my $data = $c->stash->{csv_data};
+        my $header = $c->stash->{csv_header};
+
+        my $csv = $self->csv;
+
+        $csv->sep_char($c->stash->{csv_sep_char}) if $c->stash->{csv_sep_char};
+        $csv->quote_space($c->stash->{csv_quote_space}) if defined($c->stash->{csv_quote_space});
+
+        if( $header ) {
+            $csv->combine( @$header ) or die "Could not generate row data: ".$csv->error_diag."\n";
+            $c->res->write( $csv->string );
+        }
+
+        my $adder = sub {
+            my ( $row ) = @_;
+            my @csv_row;
+
+            if( ref($row) eq 'HASH' ) {
+                die "You need to define csv_header to use this" unless $header;
+                @csv_row = map { $row->{$_} } @$header;
+            } else {
+                @csv_row = @$row;
+            }
+
+            $csv->combine( @csv_row ) or die "Could not generate row data: ".$csv->error_diag."\n";
+            $c->res->write( $csv->string );
+        };
+
+        $c->stash->{csv_cb}->( $adder );
+
+        return 1;
+    }
+
+=head2 Conclusion
+
+so now we have nice neat code in the controller that's going to be called in the view, and it's passed a closure (i might have used the wrong terms through this, but as long as you got the point who cares? :) ) that will convert the hash passed to it into a csv row, and output it to the response.
+
+now, we can run the action like before, but memory usage stays nice and low, and it's neater imo, although it's also more complex.
+
+Most of the time you won't need to do this, i've not had to in 6 years of Catalysting, but when I did, it worked a treat.
+
+p.s. the above code might not compile, it's half pulled from git logs and memory, and hasn't been tested. but the idea is sound, it's been live on our site for months now no troubles.
+
+=head2 Author
+
+Mark Ellis (n0body) L<mailto:markellis@cpan.org>

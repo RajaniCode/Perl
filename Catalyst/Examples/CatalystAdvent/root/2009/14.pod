@@ -1,0 +1,207 @@
+=head1 Graphing Your Catalyst Application
+
+Sometimes our Catalyst applications are so large, with such complex
+business rules, that we could get a little overwhelmed by their myriad
+components. Or maybe we concentrate so hard on one portion that we
+lose perspective on the big picture. Well, fear not!
+
+The Perl world offers several visualization tools. In today's Advent
+Calendar, in the spirit of Dickens' Holiday masterpiece and MVC, we'll
+look closer into three of them, while using a standard 
+L<MojoMojo|http://mojomojo.org/> installation to illustrate the results.
+
+=head2 Ghost...erm...Graph of Model Past
+
+The amazing L<SQL::Translator|https://metacpan.org/module/SQL::Translator> 
+module can easily show you what your application's schema looks like 
+directly from your database schema - be it MySQL, Oracle, PostreSQL, SQLite, 
+or any of the several other database parsers available. Just specify 
+it in the "from" field, while choosing "GraphViz" as destination.
+
+  use SQL::Translator;
+
+  my $translator = SQL::Translator->new(
+          from => 'MySQL',
+          to   => 'GraphViz',
+  ) or die SQL::Translator->error;
+
+  $translator->translate( 'MySchema.sql' );
+
+If you are using Catalyst with the ever-popular DBIx::Class (DBIC) and
+would rather fetch database information from the schema modules,
+rejoice! Use C<< SQL::Translator::Parser::DBIx::Class >> as the
+parser, and pass the loaded schema in the "parser_args" parameter. The
+code below shows this and gives the producer some customization via
+C<< producer_args >>:
+
+  use SQL::Translator;
+
+  my $schema = MyApp::Schema->connect;
+  my $translator = SQL::Translator->new(
+      parser        => 'SQL::Translator::Parser::DBIx::Class',
+      parser_args   => { package => $schema },
+      producer      => 'Diagram',
+      producer_args => {
+          out_file       => 'schema.png',
+          output_type    => 'png',
+          title          => 'My Schema',
+      },
+  ) or die SQL::Translator->error;
+
+  $translator->translate;
+
+You can even go crazy and make a Catalyst action that generates the
+diagram of the current project's schema:
+
+  sub schema : Local {
+      my ( $self, $c ) = @_;
+
+      my $translator = SQL::Translator->new(
+          parser        => 'SQL::Translator::Parser::DBIx::Class',
+          data          => $c->model('DB')->schema,
+          producer      => 'Diagram',
+          producer_args => {
+              output_type => 'png',
+              title       => 'MyApp Schema',
+          },
+      ) or die SQL::Translator->error;
+
+      $c->res->content_type('image/png');
+      $c->res->body( $translator->translate );
+
+  }
+
+The result? Well, see for yourself :)
+
+=begin pod:xhtml
+
+<a style="border-bottom:none" href="http://www.catalystframework.org/calendar/static/images/2009/asgraph/mojomojo-schema.png">
+<img src="http://www.catalystframework.org/calendar/static/images/2009/asgraph/mojomojo-schema-thumb.png" alt="MojoMojo's default schema" />
+</a> 
+
+=end pod:xhtml
+
+=head2 Graph of Controller Present
+
+Maybe model data is not your (only) issue, and your application's
+controllers and actions grew so much they need more documentation, a
+developer's quick reference guide, or even some refactoring. While
+Catalyst's controller structure usually points a programmer toward
+good organization, there might be occasional bumps on the road.
+
+Fortunately for us, L<Franck Cuny|http://lumberjaph.net/blog/> uploaded 
+to CPAN a handy module called
+L<CatalystX::Dispatcher::AsGraph|https://metacpan.org/module/CatalystX::Dispatcher::AsGraph>, 
+which can turn your private actions into a nifty directed graph in
+just a few lines of code!
+
+  use CatalystX::Dispatcher::AsGraph;
+   
+  my $graph = CatalystX::Dispatcher::AsGraph->new(
+        appname => 'MyApp',
+        output  => 'myactions.png',
+  );
+  $graph->run;
+
+If the code above is successful, C<$graph> now holds a Graph::Easy object
+storing the actions graph. We can use the C<dot> external program
+to output the result as a png file:
+
+  if ( open( my $png, '|-', 'dot -Tpng -o ' . $graph->output ) ) {
+      print $png $graph->graph->as_graphviz;
+      close $png;
+  }
+
+A demo program, bundled with the distribution, does exactly that but
+takes advantage of C<MooseX::GetOpt> to let you specify the module's
+parameters as command-line options.
+
+B<Note:> As Khisanth pointed out, this module uses MooseX::Declare and
+has no "package" information, so the CPAN indexer won't index it, and
+the shell won't find it. Until this is fixed by the author, you'll
+need to install using the package's full path (e.g. 
+C<< install FRANCKC/CatalystX-Dispatcher-AsGraph-0.02.tar.gz >>), 
+or fetch the tarball directly from the web.
+
+=begin pod:xhtml
+
+<a style="border-bottom:none" href="http://www.catalystframework.org/calendar/static/images/2009/asgraph/mojomojo-controllers.png">
+<img src="http://www.catalystframework.org/calendar/static/images/2009/asgraph/mojomojo-controllers-thumb.png" alt="MojoMojo's private actions" />
+</a>
+
+=end pod:xhtml
+
+
+=head2 Graph of Template Future
+
+Just like the schema and actions, you can view your entire template
+structure as a directed graph. The
+L<Template::AsGraph|https://metacpan.org/module/Template::AsGraph>
+module can be easily invoked to generate such data from any template
+quite easily:
+
+  use Template::AsGraph;
+
+  my $graph = Template::AsGraph->graph('mytemplate.tt2');
+
+The returned C<$graph> is a C<Graph::Easy> object, which you can turn
+into a png file just like you did with the Controller graph:
+
+  if ( open( my $png, '|-', 'dot -Tpng -o templatechart.png ) ) {
+      print $png $graph->graph->as_graphviz;
+      close $png;
+  }
+
+If you need a way to understand how your templates fit together, it
+probably means their flow is so intricate that you dynamically load
+bits and pieces depending on the data passed in by the
+Controller. Don't worry: the C<graph> method can also receive TT
+configurations as the second argument, and variables as the third:
+
+  use Template::AsGraph;
+
+  my %config = (
+      INCLUDE_PATH => 'root/src/',
+      START_TAG    => '<+',
+      END_TAG      => '+>',
+      PLUGIN_BASE  => 'MyApp::Template::Plugin',
+      PRE_PROCESS  => 'header',
+  );
+
+  my %vars = (
+       foo => 'bar',
+       bar => 'baz', 
+  );
+
+Alternatively, if you have a Catalyst context object lying around, you
+can do just like View::TT:
+
+  my %vars = ( %{ $c->stash() }, 
+                  c    => $c, 
+                  base => $c->req->base, 
+                  name => $c->config->{name} 
+             );
+
+  my $graph = Template::AsGraph->graph('mytemplate.tt2', \%config, \%vars);
+
+=begin pod:xhtml
+
+<img src="http://www.catalystframework.org/calendar/static/images/2009/asgraph/mojomojo-templates.png" alt="one of MojoMojo's templates" />
+
+=end pod:xhtml
+
+
+=head2 Conclusion
+
+We hope you get a better understanding of your applications by
+generating and analyzing graphs of their schema, actions, and
+templates.  Remember what you did right, review what could be better,
+and act upon it. This way, you are bound to become a better developer,
+which is the spirit of the season :)
+
+
+=head2 Authors
+
+Breno G. de Oliveira C<< <garu@cpan.org> >>
+
+Bogdan Lucaciu C<< <bogdan@sinapticode.ro> >>

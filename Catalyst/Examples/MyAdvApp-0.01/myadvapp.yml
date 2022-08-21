@@ -1,0 +1,15 @@
+---
+name: MyAdvApp
+
+# remove 'NOOP:' to activate config
+NOOP:Controller::Foo:
+    action:
+        load_model:
+            PathPart: item
+        list:
+            PathPart: list
+        base:
+            PathPart: mynameforfoo
+
+
+

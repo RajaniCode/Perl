@@ -1,0 +1,12 @@
+[% WRAPPER page.tt title = c.config.name  %]
+<div class="span-24"> <h1>Javascript testbed</h1>
+<ol id='ol'>
+<li>this</li>
+<li>is</li>
+<li>a</li>
+<li>test</li>
+</ul>
+</div>
+[% END %]
+
+

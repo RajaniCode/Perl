@@ -1,0 +1,17 @@
+[%
+
+page.stylesheets.push('screen.css');
+
+MACRO static(res, versioned, query) BLOCK;
+    uri_params = query || {};
+    IF res.match('^http');
+        res;
+    ELSIF versioned && ( uri_params.ver || c.config.static_build );
+        uri_params.ver = uri_params.ver || c.config.static_build;
+        c.uri_for( c.config.static_path || '/', res, uri_params );
+    ELSE;
+        c.uri_for( c.config.static_path || '/', res );
+    END;
+END;
+
+%]

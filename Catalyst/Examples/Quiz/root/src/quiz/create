@@ -1,0 +1,12 @@
+<form method="post">
+Quiz Name : <input type="textbox" name="name" />  <br>
+Choose Required modules and No of Questions in each module
+<ul>
+[% FOREACH module IN modules %]
+
+<li>[%module.name%] <input type="checkbox" name="modules" value="[%module.id%]"/> No of Questions <input type="textbox" name = "noq" value="2"/> 
+</li>
+[% END %]
+</ul>
+<input type="submit" name="submit" />
+</form>

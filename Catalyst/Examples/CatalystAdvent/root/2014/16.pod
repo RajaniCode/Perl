@@ -1,0 +1,79 @@
+=head1 Instant database admin tool with RapidApp and rdbic.pl
+
+=head1 Overview
+
+The new utility script L<rdbic.pl> from the L<RapidApp> distribution provides 
+instant CRUD access to databases via built-in web server. 
+
+=head1 Introduction
+
+L<RapidApp> is a relatively new extension to L<Catalyst> for quickly creating
+rich and interactive user-interfaces, primarily using ExtJS, with a focus on 
+database-driven applications. L<RapidApp> also provides its own suite of helpers
+to bootstrap new applications which work out-of-the-box.
+
+To showcase some of these capabilities, L<RapidApp> also now ships with the 
+utility script L<rdbic.pl> which wraps the RapidDbic helper trait to generate
+and run a fully-working CRUD application on-the-fly with a single command and
+single L<DBI> connect info (dsn) argument. 
+
+=head1 Installation
+
+To have the L<rdbic.pl> script available on your system, simply install 
+L<RapidApp> from CPAN:
+
+  cpanm RapidApp
+
+=head1 Examples
+
+The temporary application which the L<rdbic.pl> script generates includes a
+full DBIC model loaded with L<DBIx::Class::Schema::Loader>, so all that need
+be supplied is the DBI connect arguments for the database, such as:
+
+  rdbic.pl dbi:mysql:dbname,dbuser,dbpass
+
+The DSN argument is a hybrid connect info with the username and password (if
+required) appended with commas as shown above (note there are no spaces after 
+the commas).
+
+Connections which do not require a user/pass, such as SQLite, can be specified
+simply as:
+
+  rdbic.pl dbi:SQLite:/path/to/sqlt_file.db
+
+As an extra convenience, when connecting to an SQLite database, the argument can
+be supplied as a simple file-system the path to the database file:
+
+  rdbic.pl /path/to/sqlt_file.db
+
+Once the temporary application is generated it is immediately started using the 
+standard L<Catalyst> test server and can be accessed via:
+
+  http://localhost:3500
+
+=head1 Options
+
+The only required argument is the dbi connect string, but other options are also 
+available, such as changing the port and altering the high-level CRUD behavior.
+
+To view the list of options simply call the script with no options or with the
+C<--help> option:
+
+  rdbic.pl --help
+
+
+=head1 Summary
+
+The L<rdbic.pl> script provides an easy introduction to L<RapidApp> and taste
+of the kinds of interfaces which RapidApp facilitates, but is also a useful
+and convenient utility on its own.
+
+In the next article we will look at L<Plack::App::RapidApp::rDbic> which is
+the module used internally by L<rdbic.pl> and can be used and mounted 
+independently within a Plack-based setup. 
+
+=head1 Author
+
+Henry Van Styn L<vanstyn@cpan.org|email:vanstyn@cpan.org>
+
+=cut

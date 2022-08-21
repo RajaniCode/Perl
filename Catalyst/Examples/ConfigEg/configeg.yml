@@ -1,0 +1,8 @@
+---
+name: ConfigEg
+"Model::Foo":
+    paper_bag:
+        pickles: 1
+        cheese: 5
+"Model::Bar":
+    name: "Bar for the win"

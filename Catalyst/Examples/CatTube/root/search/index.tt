@@ -1,0 +1,12 @@
+<ul>
+[% FOREACH video = videos %]
+ <li>
+  <h4><a href="[% video.url %]">[% video.title %]</a></h4>
+  <p>
+   <object width="300" height="250"><param name="movie" value="http://www.youtube.com/v/[% video.id %]"></param><param name="wmode" value="transparent"></param><embed src="http://www.youtube.com/v/[% video.id %]" type="application/x-shockwave-flash" wmode="transparent" width="300" height="250"></embed></object>
+  </p>
+  <p>Posted by: [% video.author %] ([% video.length_seconds %] seconds)</p>
+ </li>
+[% END %]
+</ul>
+<br style="clear: both;"/>

@@ -1,0 +1,5 @@
+
+  * Make fails really really obvious on the overview page.
+  * Make the tag cloud not become giant.
+  * Work out what the performace issue is with catalyst-smokes.bobtfish.net when there are lots of fails, fix..
+

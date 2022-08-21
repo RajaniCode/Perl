@@ -1,0 +1,8 @@
+<html>
+  <head>
+    [% openid_server %]
+  </head>
+  <body>
+    <p>OpenID identity page for [% user %].</p>
+  </body>
+</html>

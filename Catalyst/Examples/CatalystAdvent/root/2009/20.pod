@@ -1,0 +1,101 @@
+=head1 A Tour of DBIx::Class::Helpers
+
+=head2 Hello!
+
+L<DBIx::Class> is one of the most popular ORMs used in Perl and
+Catalyst development; it is remarkably flexible and useful. But there
+is a price for that flexibility: often things that are concise in
+other ORMs are complex in L<DBIx::Class>.
+
+L<DBIx::Class::Helpers> aim at solving the complexity problem as
+succinctly as possible. As our good friend mst might say, they allow
+you to code less so you can get down to the pub earlier :-)
+
+So without further ado, I will start with the first, most basic helper...
+
+=head2 IgnoreWantarray
+
+L<DBIx::Class::Helper::IgnoreWantarray> has the longest name, but the
+most basic functionality: it takes away the context sensitivity of C<<
+$rs->search >>.  Why would a person ever want to do that? Well, in array
+context, C<< $rs->search >> will return an array of your database. You
+might not want that. I often write code like the following:
+
+ return $self->sort(
+   $self->paginate(
+      $self->schema->resultset('Parts')
+   )
+ );
+
+Unfortunately, this often means that instead of passing another
+resultset to C<< $self->sort >>, I end up passing the database
+instead.  This confounds me and my coworkers enough that I'd rather
+call C<< $rs->all >> if I need the actual results. C<IgnoreWantarray>
+makes search always return a resultset.
+
+=head2 JoinTable
+
+L<DBIx::Class::Helper::JoinTable> was one of the first components in
+the Helper suite.  Its name should make its purpose obvious. Any time
+you have a many-to-many relationship, you must have a table joining
+those two sets of items.  An example could be users and roles.  Users
+have many roles; roles have many users.  The correct way to program
+this relationship is with a join
+table. L<DBIx::Class::Helper::JoinTable> makes creating these tables
+extremely easy.  And because L<DBIx::Class> allows us to call
+C<add_columns> more than once, it's a cinch to add data other than the
+relationship.
+
+An example might be an award given from a school. We have a Student
+table, a School table, an Award table, and a Student_Award table. The
+Student_Award table should join Student and Award, but might as well
+contain the date the award was conferred and maybe some information
+about why the student received the award.
+
+=head2 Random
+
+L<DBIx::Class::Helper::Random> exists to serve a fairly basic need:
+picking random rows from a given table. Currently it only returns a
+single row, but soon, hopefully, L<DBIx::Class> will support the
+necessary machinations to return a resultset of random rows.
+
+=head2 SubClass
+
+L<DBIx::Class::Helper::SubClass> is certainly the most complex of
+these components, but I would argue it is the most important as
+well. This component allows B<almost> seamless subclassing of
+C<DBIx::Class> ResultSources.  It does things like C<<
+__PACKAGE__->table( __PACKAGE__->table ) >>, which are annoying and
+unsightly, as well as more complex things, like recreating
+relationships based on the parent class.
+
+At work I'd like to define a set of tables for authorization - users,
+roles, permissions, and join tables between them. I do not want to
+copy and paste this code to our many disparate
+projects. L<DBIx::Class::Helper::SubClass> solves the problem nicely.
+
+Another reason to use this helper is to define a table without certain
+columns (TEXT columns come to mind). Instead of redefining the table
+with the text columns in another place, you might use this helper to
+subclass the one without the text columns and add text columns to the
+child class.
+
+=head2 VirtualView
+
+L<DBIx::Class::Helper::VirtualView> is the most conceptually complex
+of the Helper components. Its purpose is mostly to clean up data
+returned from a resultset. I won't go into all the gory details here.
+For an idea of how it works see the POD and tests.
+
+=head2 Extensibility
+
+In writing these components I've tried to make parts overrideable in
+the spirit of L<DBIx::Class>. For example, if you do not like that
+join tables have an underscore between table names, you could subclass
+L<DBIx::Class::Helper::JoinTable>, override C<set_table>, and then use your
+subclassed module to name your tables as you please.
+
+=head1 Author
+
+Arthur Axel "fREW" Schmidt <frioux@gmail.com>
+

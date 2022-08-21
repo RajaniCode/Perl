@@ -1,0 +1,9 @@
+<div id="sidebar">
+	[% PROCESS 'search_list.tt2' %]
+	[% PROCESS 'calendar_list.tt2' %]
+	[% PROCESS 'categories_list.tt2' %]
+	[% PROCESS 'archives_list.tt2' %]
+	[% PROCESS 'links_list.tt2' %]
+	[% PROCESS 'syndicate_list.tt2' %]
+	[% PROCESS 'login_list.tt2' %]
+</div>

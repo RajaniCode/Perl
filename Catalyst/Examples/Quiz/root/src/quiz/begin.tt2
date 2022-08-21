@@ -1,0 +1,1 @@
+<a href="[% Catalyst.uri_for(newurl) %]" > Click on the link to start the quiz  </a>

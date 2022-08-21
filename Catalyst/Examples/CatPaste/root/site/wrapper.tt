@@ -1,0 +1,20 @@
+[%-
+# Load common macros
+PROCESS site/shared/macros.tt;
+
+# Process the appropriate layout
+IF partial_render != 1 && template.name.match('.tt');
+    DEFAULT site.layout = 'default'
+            layout.header = 'default'
+            layout.footer = 'default';
+
+    IF layout == 0;
+        content WRAPPER site/xhtml.tt;
+    ELSE;
+        content WRAPPER site/xhtml.tt + "site/layouts/${site.layout}.tt";
+    END;
+ELSE;
+    content;
+END;
+-%]
+

@@ -1,0 +1,3 @@
+<h1> Add someone </h1>
+<p><a href="[% c.uri_for('/') %]">Back to your buddies</a> </p>  
+[% form %]

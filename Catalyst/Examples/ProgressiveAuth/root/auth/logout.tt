@@ -1,0 +1,3 @@
+<h1>You made it out!</h1>
+<p>A treacherous journey, clicking that link... care to do it again?</p>
+[% PROCESS "auth/index.tt" %]

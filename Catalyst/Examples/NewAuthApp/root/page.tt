@@ -1,0 +1,7 @@
+<html>
+<head>
+<title> [% c.config.name %]</title>
+</head>
+<body>
+[% content %]
+</body>

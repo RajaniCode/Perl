@@ -1,0 +1,21 @@
+[% WRAPPER page.tt title = c.config.name  %]
+<div class="span-24"> <h1>Javascript testbed</h1>
+<h2> Lesson 1 </h2>
+
+<p> First up we have this jquery tutorial <a
+href="http://docs.jquery.com/Tutorials:Getting_Started_with_jQuery">
+from the jquery wiki.</a> Recommend using this in conjunction with <a
+href="http://www.getfirefox.com">Firefox</a> and <a
+href="http://getfirebug.com">Firebug</a>.  Also using <a href="http://code.google.com/p/blueprintcss/">blueprint css</a> to reduce typographical and layout pain
+
+<ul>
+<li><a href="[% c.uri_for('/page/1') %]"> Part 1 </a> </li>
+<li><a href="[% c.uri_for('/page/2') %]"> Part 2 </a> </li>
+<li><a href="[% c.uri_for('/page/3') %]"> Part 3 (parts unimplemented) </a> </li>
+<li><a href="[% c.uri_for('/page/4') %]"> Part 4 </a> </li>
+</ul>
+</p>
+</div>
+[% END %]
+
+

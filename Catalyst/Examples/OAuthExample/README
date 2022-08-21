@@ -1,0 +1,15 @@
+First run perl Makefile.PL and make installdeps to make sure you have 
+the required modules
+
+To generate a certificate that matches the config replace the location string
+with something relevant for you:
+
+$ openssl req -x509 -nodes -days 365 -newkey rsa:1024 -sha1 -subj   '/C=NO/ST=OS/L=Oslo/CN=osx.iusethis.com' -keyout   myrsakey.pem -out myrsacert.pem
+
+Then go to 
+
+https://www.google.com/accounts/ManageDomains
+
+and add your domain and update the PEM certificate to google
+
+now run script/oauthexample_server.pl to test the application.

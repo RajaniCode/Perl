@@ -1,0 +1,269 @@
+=head1 How I got started contributing to Catalyst
+
+From Mailing list to first commit.
+
+=head1 April 28, 2006 - jjn1056
+
+There is some strange things going
+on when I have a config in a base controller.  For
+example I have a class "element" that inherits from
+"Catalyst::Controller" which has the following line
+(again this is contrived a bit for clarity):
+
+    package element;
+
+    use strict;
+    use warnings;
+
+    use base qw/Catalyst::Controller/;
+
+    __PACKAGE__->config( view => 'element');
+
+    sub view
+    {
+      $self = shift;
+      return $self->{view};
+    }
+
+Then I have two classes that inherit from this element
+class:
+
+    package page;
+
+    use base qw/element/;
+
+    __PACKAGE__->config( view => 'page');
+
+
+and
+
+    package portlet;
+
+    use base qw/element/;
+
+    __PACKAGE__->config( view => 'portlet');
+
+So all three classes have a method called "view". 
+However this method doesn't do what I would think it
+would.  If I subclass any of these three classes for a
+catalyst controller and call $self->view on that
+subclass I always get 'portlet' as a response, instead
+of what was defined in the config for the local class.
+Maybe I just don't understand how this is supposed to
+work?
+
+--john napiorkowski
+
+=head1 April 28, 2006 - mst
+
+Not sure, that looks pretty much fine. It may be something going a bit odd in 
+the way the Class::Data::Inheritable setup works, though I've never 
+encountered any major problems. Try doing
+
+__PACKAGE__->_config({ %{ __PACKAGE__->_config } });
+
+or so before you call ->config in the subclasses and see if it sorts it. If it 
+does, a failing test case against Catalyst (since that shouldn't be necessary) 
+would be welcome :)
+
+=head1 April 28, 2006 - jjn1056
+
+I spent a lot of time digging into the trouble with
+using __PACKAGE__->config with subclassed controllers.
+The short story is that the solution from Matt (using
+"__PACKAGE__->_config({ %{ __PACKAGE__->_config }
+});") did work, although it's not so pretty since you
+need to put it in front of EVERY controller that is
+subclassing.
+
+I thought I'd show my test case so that other people
+having this trouble might be helped.  I also hope I
+can find a more elegant solution eventually.
+
+Here's the example.
+
+Say you have a base controller like the following in
+/lib (but not under /Controller since this is just a
+base class to encapsulate some functionality):
+
+    package test_controller;
+
+    use strict;
+    use warnings;
+
+    use base 'Catalyst::Controller';
+
+    __PACKAGE__->config( anything    => 'any' );
+
+    return 1;
+
+and then you have two controllers that are under
+/Controllers and are actually registered actions that
+Catalyst can find:
+
+    package MyApp::Controller::test1;
+
+    use strict;
+    use warnings;
+    use Data::Dumper;
+
+    use base 'test_controller';
+
+    __PACKAGE__->config( key => 'value' );
+            
+    sub default : Private
+    {
+        my ($self, $c)    = @_;
+        
+        $c->response->body(Dumper($self));
+    }
+
+    return 1;
+
+    package MyApp::Controller::test2;
+
+    use strict;
+    use warnings;
+    use Data::Dumper;
+
+    use base 'test_controller';
+            
+    sub default : Private
+    {
+        my ($self, $c)    = @_;
+        
+        $c->response->body(Dumper($self));
+    }
+
+    return 1;
+
+Now, the controllers test1 and test2 should expect to
+inherit config data from the base test_controller, and
+as well test1 adds it's own config data.  So the
+output of each test1 and test2 would reflect that. 
+However that is not what happens.  test2 (and any
+other controllers that are alphanumerically ordered
+AFTER test1) inherit config from both the base
+test_controller class and from test1 controller.
+
+Here's the actually output of the above two
+controllers:
+
+[http://localhost/test1]
+
+    $VAR1 = bless( {
+                    'anything' => 'any',
+                    'key' => 'value'
+                  }, 'MyApp::Controller::test1' );
+
+[http://localhost/test2]
+
+    $VAR1 = bless( {
+                    'anything' => 'any',
+                    'key' => 'value'
+                  }, 'MyApp::Controller::test2' );
+
+As you can see /test2 is getting some stuff from the
+previous controller.  However if I made a /test0
+controller exactly like test1 this would not happen. 
+Only controllers that sort post the /test1 would be
+affected.
+
+Now the solution that was given was to add some
+"__PACKAGE__->_config({ %{ __PACKAGE__->_config } });"
+prior to the normal config call.  This has to be added
+to EVERY single controller that is inheriting from a
+base controller.
+
+For example:
+
+    package MyApp::Controller::test1;
+
+    use strict;
+    use warnings;
+    use Data::Dumper;
+
+    use base 'test_controller';
+
+    __PACKAGE__->_config({ %{ __PACKAGE__->_config } });
+    __PACKAGE__->config( key => 'value' );
+            
+    sub default : Private
+    {
+        my ($self, $c)    = @_;
+        
+        $c->response->body(Dumper($self));
+    }
+
+    return 1;
+
+    package MyApp::Controller::test2;
+
+    use strict;
+    use warnings;
+    use Data::Dumper;
+
+    use base 'test_controller';
+
+    __PACKAGE__->_config({ %{ __PACKAGE__->_config } });
+        
+    sub default : Private
+    {
+        my ($self, $c)    = @_;
+        
+        $c->response->body(Dumper($self));
+    }
+
+    return 1;
+
+And now everything will JUST WORK.  it works by
+resetting the private _config method (which takes hash
+ref) to whatever it's value is supposed to be.
+
+Although this solution does the trick, I looked into
+this further, since I really think this solution is a
+bit undesirable.  Personally I prefer to encapsulate
+common behavior to base classes (as I am sure many of
+you do) and having that line stuck in the top of every
+controller is just going to cause me trouble sooner or
+later.  For example I am sure that myself or another
+programming will forget to do this, or not understand
+why it is there in the first place and remove it.
+
+=head1 April 28, 2006 - mst
+
+Yes. That's why I was guiding you towards a test case we can commit to 
+Catalyst trunk and get this fixed in Catalyst::Component itself.
+
+I already grasped the trouble. That's how I was able to give you a workaround :)
+
+Can I have that test patch please?
+
+=head1 May 7, 2007
+
+L<https://github.com/perl-catalyst/catalyst-runtime/commit/5e7073968974a588522d61b3a72b23cd87a8121a>
+
+=head1 Conclusion
+
+Many of us get started contributing to opensource because we have a
+particular itch to scratch.  The main think is to make the effort.  You
+could either introduce a local hack into your project source code (and
+forever curse yourself and your replacements with supporting it).  Or
+you could try to find a way to fix it once and for all time.
+
+When I went to the mailing with my issue I'd only been using Catalyst for
+a handful of months.  I was in no way an expert on the codebase and I was
+very new to open source contributing.  So you don't need to be a kung fu
+master to help out!
+
+You might not be able to fix the problem you find, but it you make the
+effort to learn to test suite well enough to present us with a cogent
+test case demonstrating your problem I can assure you that effort to
+fix it would be made.  And hopefully the fact you learned to actually make
+a test case commit will make it easier for you down the road.
+
+=head1 Author
+
+John Napiorkowski L<jjnapiork@cpan.org|email:jjnapiork@cpan.org>
+
+=cut

@@ -1,0 +1,20 @@
+<a href="[% c.uri_for(c.controller.action_for('list')) %]">
+  user list
+</a>
+&nbsp
+<a href="[% c.uri_for(c.controller.action_for('update'), [user.login_name]) %]">
+  update
+</a>
+&nbsp
+<a href="[% c.uri_for(c.controller.action_for('delete'), [user.login_name]) %]">
+  delete
+</a><br/>
+[%
+
+FOREACH field IN c.model.public_fields.keys;
+
+  field; ': '; user.$field; "<br/>\n";
+
+END;
+
+%]

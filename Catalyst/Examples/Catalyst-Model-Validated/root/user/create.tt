@@ -1,0 +1,21 @@
+<form method="post">
+[%
+
+FOREACH field IN c.model.fields.keys;
+
+  type = c.model.fields.$field;
+  '<p>';
+    field; ': '; INCLUDE "share/fields/$type"
+                         name = field
+                         value = c.model.params.$field; ' ';
+    FOREACH error IN c.model.errors.$field;
+      INCLUDE "share/errors/$error" name = field;
+      ', ' UNLESS loop.last;
+    END;
+  "</p>\n";
+
+END;
+
+'<input type="submit"/>';x
+
+%]</form>

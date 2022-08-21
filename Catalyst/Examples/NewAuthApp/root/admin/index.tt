@@ -1,0 +1,8 @@
+[% WRAPPER page.tt title = c.config.name  %]
+<h1> Hi [% c.user.id %], you're allowed to admin  </h1>
+
+There's not much else to see here, you can <a href='[% c.uri_for('/auth/logout')%]'>logout</a>.
+
+[% USE dumper; dumper.dump_html(c.user) %]
+
+[% END %]

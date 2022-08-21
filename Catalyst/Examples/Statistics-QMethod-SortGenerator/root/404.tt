@@ -1,0 +1,4 @@
+[% WRAPPER page.tt title = "404 Not Found" %]
+<h1>404 Not Found</h1>
+<a href="[% c.uri_for('/') | html %]">Go home</a>
+[% END %]

@@ -1,0 +1,4 @@
+[% WRAPPER page.tt title = c.config.name  %]
+<h1> Logout successful</h1>
+<a href='[% c.uri_for('/') %]'>Return to home page</a>
+[% END %]

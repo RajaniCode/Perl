@@ -1,0 +1,21 @@
+<form method="post" action="[%postaction%]" >
+
+Question : [%question.question%] <br>
+
+
+Select an  answer 
+<ul>
+[% FOREACH option IN options %]
+
+<li><input type="radio" name="choice" value="[%option.id%]"/> [% option.choices %] </li>
+
+[% END %]
+
+</ul>
+
+<input type="submit" name="submit" />
+
+</form>
+
+
+

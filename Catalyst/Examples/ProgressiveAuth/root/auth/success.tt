@@ -1,0 +1,28 @@
+[%~
+
+USE Dumper;
+
+~%]
+<h1>Congratulations! You logged in!</h1>
+<p>You can <a href="[% c.uri_for( c.controller('Auth').action_for('logout') ) %]">logout</a> now, since this app doesn't do much.</p>
+[% IF c.user_in_realm('openid') %]
+<p>Hey OpenID User!  Here's your info from your OpenID provider</p>
+<table border="1">
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>URL</td><td>[% c.user.url  || "None" %]</td></tr>
+    <tr><td>Display</td><td>[% c.user.display  || "None" %]</td></tr>
+    <tr><td>RSS</td><td>[% c.user.rss  || "None" %]</td></tr>
+    <tr><td>Atom</td><td>[% c.user.atom  || "None" %]</td></tr>
+    <tr><td>FoaF</td><td>[% c.user.foaf  || "None" %]</td></tr>
+    <tr><td>Declared RSS</td><td>[% c.user.declared_rss  || "None" %]</td></tr>
+    <tr><td>Declared Atom</td><td>[% c.user.declared_atom  || "None" %]</td></tr>
+    <tr><td>Declared FoaF</td><td>[% c.user.declared_foaf || "None" %]</td></tr>
+    <tr><td>FoaF Maker</td><td>[% c.user.foafmaker || "None" %]</td></tr>
+</table>
+
+[% ELSIF c.user_in_realm('local') %]
+<p>
+    Hey local user, isn't it boring just using normal passwords? Try logging in
+    with <a href="http://openid.net">OpenID</a> for extra goodies</a>
+</p>
+[% END %]

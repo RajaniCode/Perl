@@ -1,0 +1,8 @@
+---
+name: CatTube
+'View::TT':
+    TEMPLATE_EXTENSION: '.tt'
+    CATALYST_VAR: 'Catalyst'
+'Model::YouTube':
+    dev_id: 'rDU0adV6FuM'
+

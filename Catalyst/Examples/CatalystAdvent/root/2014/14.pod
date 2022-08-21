@@ -1,0 +1,171 @@
+=head1 UTF8 Encoding in Body Response
+
+All about stuff that is changing in the Holland (current development)
+release around content encoding and unicode support (part three, encoding
+the body response.
+
+=head1 Summary
+
+	use utf8;
+	use warnings;
+	use strict;
+
+	package MyApp::Controller::Root;
+
+	use base 'Catalyst::Controller';
+	use File::Spec;
+
+	sub scalar_body :Local {
+		my ($self, $c) = @_;
+		$c->response->content_type('text/html');
+		$c->response->body("<p>This is scalar_body action ♥</p>");
+	}
+
+	sub stream_write :Local {
+		my ($self, $c) = @_;
+		$c->response->content_type('text/html');
+		$c->response->write("<p>This is stream_write action ♥</p>");
+	}	
+
+	sub stream_write_fh :Local {
+		my ($self, $c) = @_;
+		$c->response->content_type('text/html');
+
+		my $writer = $c->res->write_fh;
+		$writer->write_encoded('<p>This is stream_write_fh action ♥</p>');
+		$writer->close;
+	}
+
+	sub stream_body_fh :Local {
+		my ($self, $c) = @_;
+		my $path = File::Spec->catfile('t', 'utf8.txt');
+		open(my $fh, '<', $path) || die "trouble: $!";
+		$c->response->content_type('text/html');
+		$c->response->body($fh);
+	}
+
+=head1 Discussion
+
+Beginning with the current development release (Holland, dev003 currently on CPAN as of this
+writing) L<Catalyst> enables UTF8 body response encoding by default.  You no longer need to
+set the encoding configuration (although doing so won't hurt anything).
+
+Currently we only encode if the content type is one of the types which generally expects a
+UTF8 encoding.  This is determined by the following regular expression:
+
+	$c->response->content_type =~ /^text|xml$|javascript$/
+
+You should set your content type prior to header finalization if you want L<Catalyst> to 
+encode.
+
+=head2 Encoding with Scalar Body
+
+L<Catalyst> supports several methods of supplying your response with body content.  The first
+and currently most common is to set the L<Catalyst::Response> ->body with a scalar string (
+as in the example):
+
+	sub scalar_body :Local {
+		my ($self, $c) = @_;
+		$c->response->content_type('text/html');
+		$c->response->body("<p>This is scalar_body action ♥</p>");
+	}
+
+In general you should need to do nothing else since L<Catalyst> will automatically encode
+this string during body finalization.  The only matter to watch out for is to make sure
+the string has not already been encoded, as this will result in double encoding errors.
+
+=head2 Encoding with streaming type responses
+
+L<Catalyst> offers two approaches to streaming your body response.  Again, you must remember
+to set your content type prior to streaming, since invoking a streaming response will automatically
+finalize and send your HTTP headers (and your content type MUST be one that matches the regular
+expression given above.)
+
+The first streaming method is to use the C<write> method on the response object.  This method
+allows 'inlined' streaming and is generally used with blocking style servers.
+
+	sub stream_write :Local {
+		my ($self, $c) = @_;
+		$c->response->content_type('text/html');
+		$c->response->write("<p>This is stream_write action ♥</p>");
+	}
+
+You may call the C<write> method as often as you need to finish streaming all your content.
+L<Catalyst> will encode each line in turn.
+
+The second way to stream a response is to get the response writer object and invoke methods
+on that directly:
+
+	sub stream_write_fh :Local {
+		my ($self, $c) = @_;
+		$c->response->content_type('text/html');
+
+		my $writer = $c->res->write_fh;
+		$writer->write_encoded('<p>This is stream_write_fh action ♥</p>');
+		$writer->close;
+	}
+
+This can be used just like the C<write> method, but typicallty you request this object when
+you want to do a nonblocking style response since the writer object can be closed over or
+sent to a model that will invoke it in a non blocking manner.  For more on using the writer
+object for non blocking responses you should review the C<Catalyst> documentation and also
+you can look at several articles from last years advent, in particular:
+
+L<http://www.catalystframework.org/calendar/2013/10>, L<http://www.catalystframework.org/calendar/2013/11>,
+L<http://www.catalystframework.org/calendar/2013/12>, L<http://www.catalystframework.org/calendar/2013/13>,
+L<http://www.catalystframework.org/calendar/2013/14>.
+
+The main difference this year is that previously calling ->write_fh would return the actual
+plack writer object that was supplied by your plack application handler, whereas now we wrap
+that object in a lightweight decorator object that proxies the C<write> and C<close> methods
+and supplies an additional C<write_encoded> method.  C<write_encoded> does the exact same thing
+as C<write> except that it will first encode the string when necessary.  In general if you are
+streaming encodable content such as HTML this is the method to use.  If you are streaming
+binary content, you should just use the C<write> method (although if the content type is set
+correctly we would skip encoding anyway, but you may as well avoid the extra noop overhead).
+
+The last style of content response that L<Catalyst> supports is setting the body to a filehandle
+like object.  In this case the object is passed down to the Plack application handler directly
+and currently we do nothing to set encoding.
+
+	sub stream_body_fh :Local {
+		my ($self, $c) = @_;
+		my $path = File::Spec->catfile('t', 'utf8.txt');
+		open(my $fh, '<', $path) || die "trouble: $!";
+		$c->response->content_type('text/html');
+		$c->response->body($fh);
+	}
+
+In this example we create a filehandle to a text file that contains UTF8 encoded characters. We
+pass this down without modification, which I think is correct since we don't want to double
+encode.  However this may change in a future development release so please be sure to double
+check the current docs and changelog.  Its possible a future release will require you to to set
+a encoding on the IO layer level so that we can be sure to properly encode at body finalization.
+So this is still an edge case we are writing test examples for.
+
+=head1 Disabling default UTF8 encoding
+
+You may encounter issues with your legacy code running under default UTF8 body encoding.  If
+so you can disable this with the following configurations setting:
+
+	MyApp->config(encoding=>undef);
+
+Where C<MyApp> is your L<Catalyst> subclass.
+
+If you believe you have discovered a bug in UTF8 body encoding, I strongly encourage you to
+report it (and not try to hack a workaround in your local code).
+
+=head1 Conclusion
+
+Getting UTF8 characters from form POSTs and in your URL query should mostly 'do the right
+thing'.  Of course there's a bit of an art to this and we expect that over time we'll
+need to build up a cookbook of practices and workarounds to help even more.
+
+In the final article we we look at how L<Catalyst> does response body encoding, including
+streaming, delayed and filehandle responses.
+
+=head1 Author
+
+John Napiorkowski L<jjnapiork@cpan.org|email:jjnapiork@cpan.org>
+
+=cut

@@ -1,0 +1,21 @@
+<html>
+<head>
+  <title>[% (title || "Q Sort Gennerator") | html %]</title>
+<link rel="stylesheet" href="[% base %]static/css/blueprint/screen.css" type="text/css" media="screen, projection" />
+<link rel="stylesheet" href="[% base %]static/css/blueprint/print.css" type="text/css" media="print" />    
+<!-- [if IE]><link rel="stylesheet" href="[% base %]static/css/blueprint/ie.css" type="text/css" media="screen,  projection" /><![endif] -->
+<link rel="stylesheet" href="[% base %]static/css/site.css" type="text/css" media="screen, projection"/>    
+<script type="text/javascript" src="[% base  %]static/js/jquery.js" />
+<script type="text/javascript">                                         
+ // js  here
+</script> 
+</head>
+<body>
+<div class="container">
+[% IF c.flash.message %]
+<div class="span-24"> <p class="message">[% c.flash.message | html %]</p></div>
+[% END %]
+[% content %]
+</div>
+</body>
+</html>

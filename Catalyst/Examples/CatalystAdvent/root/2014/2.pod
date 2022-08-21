@@ -1,0 +1,59 @@
+=head1 Plack::Middleware::HTTPExceptions 
+
+=head1 Overview
+
+Use an exception object as your response
+
+=head1 Introduction
+
+One of the great thing about L<Catalyst> is its strong separation of concerns.
+This of course is a hallmark of the MVC pattern.  However there are times when
+it is a bit onerous to always require a separate view to build a response.  For
+simple cases you can now just throw an exception in your controller (or in
+code called by the controller) and if that exception conforms to the interface
+defined by L<Plack::Middleware::HTTPExceptions> we automatically build a
+meaningful HTTP response.
+
+=head1 Example
+
+    package MyApp::Controller::User;
+
+    use base 'Catalyst::Controller';
+    use HTTP::Exception;
+
+    sub find_user_at :Path('') Args(1) {
+      my ( $self, $c, $arg ) = @_;
+      $c->stash(user => $c->model(‘DB::User’)->from_id($arg) || 	
+        HTTP::Exception->throw(404, status_message=>”Not Found"));
+    }
+
+    1;
+
+=head1 Discussion
+
+In the above example we have a URL template like "/user/{:arg}" and we expect
+the $arg to be an ID that can be used to find a User resource from some storage
+such as a L<DBIx::Class> backed database.  However it is possible that the user
+will not be found from th given ID.  In that case we want to return something
+meaningful to the client, such as a 404 NOT FOUND response.  In the example above
+this is what we do.
+
+L<Catalyst> supports this via the now included L<Plack::Middleware::HTTPExceptions>
+and you can use L<HTTP::Exception> or L<HTTP::Throwable>.  However the interface is
+trival and its easy to roll your own expection objects.
+
+I find this technique works well when I need to rapidly mock up an API or in the
+beginning stages of development when I don't have all the error response pages I
+need.  Its also great for simple demos!  I find it falls apart when the response
+case is more complex, such as if the response needs to be subject to content
+negotiation (for example when you API can support XML or JSON).
+
+=head1 More Information
+
+You should review L<Plack::Middleware::HTTPExceptions> for more details.
+
+=head1 Author
+
+John Napiorkowski L<jjnapiork@cpan.org|email:jjnapiork@cpan.org>
+
+=cut

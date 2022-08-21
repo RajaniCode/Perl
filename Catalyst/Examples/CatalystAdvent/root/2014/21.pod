@@ -1,0 +1,129 @@
+=head1 The Future of Catalyst, or the Fifty Year Framework
+
+=head1 Overview
+
+Wrap up of Advent 2014, musings on the future.
+
+=head1 Ten Years of Catalyst
+
+From the Changes file:
+
+    2.99_12  2005-01-28 22:00:00 2005
+            - first development release
+
+Well, its been a fast ten years hasn't it?  I've been lucky enough to have now
+several jobs where L<Catalyst> played an important part of the technology stack
+and I've been grateful for the career opportunities and work life stability that
+has given me.  As I am sure many of you also feel.  And I am pleased that I've been
+able to spend so much time with this framework, which I consider a seminal Modern
+Perl project.  From my outlook nearly everything is better now than ten years ago.
+
+But I think this is not a great time to think about all the past things.  For sure
+L<Catalyst> still evolves and has managed to change itself over time to meet new
+developer needs.  That is a task that is ongoing and probably is always behind
+schedule.  And although we did a lot I can't help but feel slightly sad that we did
+not manage to achieve more notoriety beyond our circle, as compared to similar
+frameworks in other languages that date from around the same time. However the
+question I often find myself thinking lately is what can I do to make sure the next
+ten years of Catalyst are as at least successful as the first ten, if not more
+so.  Which leads me to think about what in Catalyst is changing, and how we make
+decisions about change.
+
+=head1 Catalyst change management process
+
+In general there are two rules I use when thinking about changing Catalyst.  The
+first is technical merit of the idea.  If there is a bug, then its obvious it needs
+to be fixed.  Less obvious is the types of refactoring that went into giving Catalyst
+modern features like websocket support, interoperability with event loops and to expose
+more and more of Catalyst's L<PSGI> underpinnings.
+
+When an idea has strong technical merit, it recommends itself.  The only thing to 
+consider is the needs of backward compatibility, and to offer people upgrading at
+least some sort of path forward when features change (such as to have plugins or
+configuration options to replace or replicate something that is no longer available).
+
+Then there is a second and more difficult type of change consideration, which is 
+the general will of the community.  Like technical merit, this needs to balance against
+our commitment to not leave existing users high and dry with changes that break code
+and offer no path forward that does not involve significant code rewrites.  Unlike
+technical merit, the will of the community can be hard to figure.  In general we don't
+get a lot of bug reports or conversation around Catalyst future evolution.  I wish
+I could find a way to get more involvement, but I also understand this is not very
+unusual issue for open source projects.  I personally don't believe that "silence is
+consent" either.  I think choices need to have broad acceptability or the choosers
+lose respect and authority.  Typical that results in people just drifting away.
+
+Without direct involvement the only other way to measure the will of the community
+is to look at what other choices people are making and what other projects have
+received the acceptance of a broad number of people.  Since L<Plack> is clearly
+accepted and important it leads me to feel the choice to make Catalyst expose
+more of its Plack nature and to better play with the larger Plack ecosystem are
+correct ones.  One can also pay attention to the kinds of problems that get reported
+on IRC, at conferences and the problems that I see having looked at how Catalyst has
+been used in the wild.  For example its clear that Chaining actions could use a tweak
+in some way since it seems to trip up people a lot.  The same goes with $c->forward 
+and $c->go, which tend to lead to confusing code (and combined with the stash is a
+particularly toxic brew).
+
+Going further, if we allow ourselves to look hard at projects 
+outside of Perl we can get lots of great ideas about what has worked for other
+projects in other languages.  When we see certain features and approaches have
+excited programmers using frameworks like Ruby on Rails, Django, Scala Play, etc.
+then it should provide us with with help in thinking about how those features
+might influence the evolution of Catalyst as well.
+
+=head1 2015?
+
+Given all that, what could 2015 look like?  I fully expect to see us stabilize all
+the great new UTF8 and encoding fixes and to start building some community practices
+to help people solve complex encoding problems.  I also expect to see us continue
+to move more features into the middleware layer, such that over time most of what
+we think of as the Catalyst context would be mostly an interface over the Plack $env.
+
+Thinking bigger, I've been asked when if ever will we have a version of Catalyst
+that does more to discard the technical debt of the past.  I am very committed to
+offering people a path forward, even if Catalyst Six is built on a newer, cleaner
+codebase, you should be able to run your existing applications.  I believe that
+we can do this because now that Catalyst exposes so much of its Plack roots it
+is possible to think that we could have a version of Catalyst Six which could mount
+over the PSGI interface a "Catalyst 5 VM" so to speak.  So in a similar way that
+Apple migrated from OS9 to OSX, Catalyst 5 can migrate to a Catalyst Six.  It would be work
+but it would be possible to think you could have Catalyst 5 and Six controllers and
+models side by side, and the application would automatically do all the needed piping.
+That way you could migration code as it needed and as you had time and will.
+
+So that is the way we could do it, yet I think in 2015 we really need to answer the questions
+"What are we changing, and why, and how is it going to make it better?"  Otherwise
+there's no point in taking the risk of alienating those who have spend many years
+learning and building applications on top of the Catalyst core we all know and
+use everyday.
+
+Towards that end I initiated a documentation project a few months back with the intention
+of summarizing core Catalyst code and concepts.  The idea is we we fully understand what
+we are today, we can more easily generate a diff to tomorrow.  The project is currently
+an outline and you can see it (and send pull requests to)
+
+L<https://github.com/perl-catalyst/Catalyst-Components-Concepts-Cases>
+
+My hope is that the community can help me at least ask the correct questions, so please
+take a look and send a PR or open an issue with your thoughts.  I've also considered making
+a request for a grant from the Perl Foundation in order to work on these docs, and wonder
+what you all think of that :)
+
+Until we can correctly answer all these questions, I will continue to push to change
+Catalyst in ways that technical merit themselves, and to do what I can do to make a
+transition as I've outlined above more possible.
+
+=head1 Conclusion
+
+Like all open source projects L<Catalyst> needs community involvement
+at all levels in order to continue to evolve in a direction that maintains
+relevance for today and the future.  As we begin the tenth year of L<Catalyst>
+it will be that involvement which determines if our usefulness will fade or
+if we continue to meet our ever changing needs for a Modern Perl web framework.
+
+=head1 Author
+
+John Napiorkowski
+
+=cut

@@ -1,0 +1,1 @@
+Run plackup --app script/placky_app.psgi --server Standalone::Prefork

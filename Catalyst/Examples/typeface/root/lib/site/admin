@@ -1,0 +1,30 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+	"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" version="-//W3C//DTD XHTML 1.1//EN" xml:lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8" />
+
+	<title>Typeface - Admin</title>
+	<link rel="stylesheet" href="/static/stylesheets/admin.css" type="text/css" media="screen" charset="utf-8">
+	<script type="text/javascript" charset="utf-8">
+	 djConfig = { baseScriptUri: "/static/", parseWidgets: false, searchIds: [] };
+	</script>
+	<script src="/static/dojo/dojo/dojo.js" type="text/javascript"></script>
+	<script type="text/javascript" charset="utf-8" src="/static/javascripts/application.js"></script>
+</head>
+
+<body>
+<div id="main">
+	<div style="float: right; padding-right: 30px;">
+		[% PROCESS login_pane.tt2 %]
+	</div>
+	<h1 style="display: inline;">Typeface</h1>
+</div>
+&nbsp;
+[% PROCESS message.tt2 %]
+[% content %]
+</body>
+</html>
+
+

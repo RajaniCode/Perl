@@ -1,0 +1,52 @@
+Ideas:
+ - Catalyst::Plugin::MessageStack + Data::Manager model
+   show how to have seamless integration with your validation model's messages
+   simple message display plugin
+
+ - Catalyst::View::TT::Bootstrap
+   skinnable UI
+ 
+ - CatalystX::BREAD
+   simple BREAD layer with JSON api (much like a simple C::C::DBIC::API class)
+
+ - sensible scaling and architectural choices (HI t0m :-))
+ - start bugging people via email about writing articles
+ - Bread::Board stuff
+ - Facebook graph API stuff
+ - twitter API stuff (I think I still have some code for this somewhere - dhoss)
+ - new PSGI features (what they afford us in 5.9, etc)
+
+ - AutoCRUD (thanks oliver)
+ - mo: the interesting thing about metacpan-web is how we do concurrent requests to the api to build the page
+ - dotcloud deployment (miyagawa?)
+   other such cloud deployment
+ - puppet psgi deployment
+ - chef deployment
+ - carton + catalyst
+ - starman/server_starter sane web app process service management
+
+ - multiple chains ending in one action
+     t0m : the canonical example case being
+            /cd/barcode/<ID>/track/<id> and
+            /cd/by_number_from_the_left_on_my_self/<INDEX>/track/<id>
+     t0m :  everything from /track can all be implemented by shared code, that
+            just chains to ../find_cd (or whatever)
+     rafl:  oh, right. and you get to compose actions chained like that into
+            multiple controllers, getting "
+     rafl: "multiple chains ending in one action", which is often requested
+            but its support not very obvious
+
+ - Internationalization and https://metacpan.org/module/MENDEL/Catalyst-Plugin-I18N-PathPrefix-0.07/lib/Catalyst/Plugin/I18N/PathPrefix.pm
+   for localizing the path for example: /en/hello /de/hallo
+
+Done:
+ - "State of the Cat" -> t0m
+ - "Checking for leaks in MyApp" - SpiceMan
+ - "Fat Models" - lecster
+ - "Keep your libraries organized" - dpetrov
+
+Enqueued:
+ 
+
+In Progress:
+ - CatalystX::BREAD - dhoss

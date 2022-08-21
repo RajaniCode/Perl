@@ -1,0 +1,3 @@
+<h1>Oh no</h1>
+<p>We couldn't authenticate you.  Please check your credentials and try again.</p>
+[% PROCESS "auth/index.tt" %]

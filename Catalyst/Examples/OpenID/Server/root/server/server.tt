@@ -1,0 +1,17 @@
+<p>Authentication for [% openid.identity %]</p>
+<form action="[% c.uri_for(c.action, c.req.query_parameters).as_string %]" method="POST">
+    <p>Would you like to share your identity with [% openid.trust_root %]?
+    yes <input type="radio" name="trust_consumer" value="yes"/>
+    no <input type="radio" name="trust_consumer" value="no"/></p>
+[% IF !c.user_exists || !is_identity %]
+    [% IF c.req.param('user') && c.req.param('password') %]
+    <p>Wrong user name or password!</p>
+    [% END %]
+    <p>user<br/><input type="text" name="user" class="openid" /></p>
+    <p>password<br/><input type="password" name="password" class="openid" /></p>
+[% END %]
+<p>
+    <input type="submit" name="ok" value="ok" />
+    <input type="submit" name="cancel" value="cancel" />
+</p>
+</form>

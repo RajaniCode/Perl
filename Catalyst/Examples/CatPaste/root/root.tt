@@ -1,0 +1,11 @@
+[%
+
+page.links.push({
+    href  => c.uri_for( c.controller('Root').action_for('feed') ),
+    rel   => "alternate",
+    title => "RSS Feed",
+    type  => "application/rss+xml"
+});
+
+PROCESS "paste/root.tt"
+%]

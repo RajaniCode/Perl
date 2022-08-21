@@ -1,0 +1,7 @@
+[% WRAPPER page.tt title = c.config.name  %]
+<h1> Login successful</h1>
+<p>Hi [% c.user.id %], you can <a href='[% c.uri_for('/auth/logout')%]'>logout</a> now if you like, or try to visit <a href="[% c.uri_for('/admin') %]">this</a> page which is protected by user roles.</p>
+<hr />
+[% USE dumper; dumper.dump_html(c.user) %]
+
+[% END %]

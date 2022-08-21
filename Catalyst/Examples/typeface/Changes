@@ -1,0 +1,188 @@
+This file documents the revision history for Perl extension Typeface.
+
+0.72 Sun Jan 28 20:29:18 PST 2007
+
+        Major memory leak fixes, no with Typeface specifically but the projects it depends on.
+        
+        Changed:
+                Cache::Store::FastMmap to Cache::FileCache
+                Removal of local PageCache
+                Session::Store::FastMmap to Session::Store::File
+                
+        Fixed:
+                Fixed memory leak with syntax highlighting.
+                Lowered memory footprint.
+                Fixed conflict between code highlighter and textile.
+                Fixed memory leak with formbuilder + bundled with fix.
+                Fixed memory leak with c::c::formbuilder + bundled with fix
+        
+
+0.71 Sat Jan 20 21:12:21 PST 2007
+
+        Minor fixes and improvements.
+        
+        New: 
+                Added a category editor in the admin backend. 
+                 - oops forgot about this one when transitioning to the Dojo powered backend.
+                 
+        Changed:
+                Minor code cleanup still much to do.
+                
+        Fixed:
+                Fixed possible memory leak?
+                Fixed order of how Archived lists display.
+                Set Page titles depending on subject or page name. (SEO optimization)
+                Added Catalyst::View::JSON as a dependency
+                Added Text::Highlight as a dependency
+                
+
+0.7 2007-1-16 04:28:44
+
+	Lots of optimizations and miscellaneous fixes. 
+	
+	New:
+		Two new ported Wordpress templates, Connections and ChaoticSoul.
+		Created dedicated site for Typeface - http://typeface-project.org/
+		Included ProxyReplyAs Catalyst plugin if you wish to deploy Typeface through 
+		HTTP proxy.
+		Two new ported Wordpress themes, chaotic soul and connections.
+
+	Changed:
+		Refactored template support for easier Wordpress theme porting.
+		Switched back to Server::XMLRPC since they fixed their circular memory leak. 
+		(thanks mst)
+		
+	Fixed:
+		All dependencies are accounted for thanks to Kevin Old.
+		Dojo optimizations.
+		Improved syntax highlighter.
+		Switch to Catalyst::Controller::FormBuilder
+
+0.6 2006-12-16 03:06:45
+
+	Fixed:
+		Lots of issues got stomped out that were in the previous release.
+		Memory leak with C::P::Server::XMLRPC (thanks MST)
+		Rendering issues in various places.
+		
+	New:
+		Standardized admin back-end that is not constrained by the loaded template.
+		Live Search
+		Live Sort of the category list
+		Ability to add and delete links.
+		Experimental SCGI implementation for Catalyst.
+		
+	Changes:
+		New Streamlined layout.
+		Switch from C::P::Server::XMLRPC to C::P::XMLRPC for now till all memory leaks get resolved with the former.
+		
+	BUGS:
+		Safari can't generate the WYSIWYG Editor on the fly in the back-end. 
+		
+
+0.5 2006-12-02 07:14:00
+- Fourth release, a bit more user friendly than before.
+
+	Fixed:
+		Fixed all remaining IE render issues.
+		Cleaned up CSS.
+		Fixed caching issues with cache::store::fastmmap.
+		Code clean up.
+		Fixed miscellaneous metaweblog xmlrpc issues.
+		Fixed time in words to not be dependent on a single time zone.
+		Cleaned up documentation.
+		
+	New Features:
+		Added install script to bootstrap the initial user.
+
+0.4 2006-11-17 08:00:00
+- Third public release of typeface.
+
+	Fixed: 
+		IE render width issue.
+		Removed all traces of lets get dugg.
+	
+	New Features:
+		Template support.
+		Site title configurable in YAML
+
+0.3 2006-11-20 04:55:00
+- Second public release of typeface.
+
+	Fixed:
+		Create new page link fixed.
+		Modification of pages fixed.
+		Code cleanups.
+		
+	New Features:
+		Ability to create pages not in the tab drawer.
+		
+
+0.2  2006-11-01 03:59:00
+- First public release of typeface.
+
+Features:
+	XML-RPC MetaWeblog edit and submission
+	Captcha image verification
+	Categories
+	Human readable *cachable* time information.
+	Human readable URLs			ex: /view/<article_subject>
+	Structured archive URLs   	ex: /archive/<year>/<month>/<day>
+	Self contained on-site search
+	By-the-month Calendar
+	Tabbed Pages
+	RSS Syndication throughout the site 
+	Code highlight tags [code syntax="Perl"] [/code]
+		Valid syntax:
+			CPP
+			CSS
+			HTML
+			Java
+			PHP
+			Perl
+			SQL
+
+TODO:
+	Code clean up
+	XML-RPC site pinging on article post
+	Implement my idea "MetaBonds"
+	
+
+Who is this release for?
+	Skillful users and developers who might be interested in contributing. 
+
+Why make yet another blog?
+	Why not? I am not pleased with wordpress due to its lack of caching. It can't hold up to a good old slashdotting! This blog takes advantage of caching through out to minimize server resource usage and produce the best visit/connection throughout put. The other reason I made this was to learn the wonderful Catalyst web framework.  
+
+What makes this blog so special?
+	This blog is geared toward developers who wish to blog about their development cycle! I am completely gearing this toward the OSS developer demographic. This blog makes it easy at conveying your thoughts and ideas by posting syntax highlighted code snippets. Second of all, Caching Caching and some more caching! Almost every page is cached, for the best performance possible!  
+	
+Installation
+
+	1) Install all the dependencies from cpan.
+	2) import the SQL schema.
+	3) create your initial user: INSERT INTO users (name,password) values ('myuser','mypass');
+	4) Login!
+	
+Dependency list:
+	ConfigLoader 
+	Static::Simple 
+	PageCache 
+	Cache::FastMmap 
+	FormBuilder 
+	Session 
+	Session::Store::FastMmap 
+	Cache Session::State::Cookie 
+	Textile DateTime 
+	Authentication 
+	Authentication::Store::DBIC 
+	Authentication::Credential::Password 
+	Prototype 
+	Captcha 
+	Server 
+	Server::XMLRPC
+	Text::Highlight
+	XML::Feed
+
+0.1  2006-10-18 10:41:39
+        - initial revision, generated by Catalyst

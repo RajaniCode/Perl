@@ -1,0 +1,15 @@
+h1 { font-variant: small-caps ;
+     text-align: center;
+     }
+
+.blue {  background-color: #3FF }
+
+#q_table ul {  list-style-type: none;
+              margin: 10px;
+              background-color: #3FF;
+              : 40px;
+              }
+#q_table li  { border: 1px solid black;
+               margin-top: 5px;
+               background-color: white;}
+

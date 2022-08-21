@@ -1,0 +1,381 @@
+=head1 An AJAX CRUD Interface with Catalyst and jQuery
+
+In this example, we will develop an AJAX CRUD (Create Read Update Delete)
+extension to the Catalyst tutorial.
+
+AJAX stands for Asynchronous JavaScript And XML (although these days
+most people use JSON as a data-interchange format instead of XML). The
+idea is to make a web page, or part of one, something that's less like a
+traditional web page, where an entire page must be loaded from the
+server any time information is changed, and closer to a GUI app, where
+elements of a page can be updated on the fly, without reloading the
+whole page.
+
+=head2 Installing Flexigrid
+
+First, get the tarball of the Catalyst Tutorial from
+L<http://dev.catalyst.perl.org/repos/Catalyst/trunk/examples/Tutorial/MyApp_Chapter9_FormFu.tgz>.
+
+We're going to use Flexigrid, a jQuery-based data grid, from
+L<http://www.flexigrid.info/>.
+
+Download and unzip the Flexigrid zip file, and put the contents of its
+C<css/flexigrid/images> and C<css/images> directories into the tutorial's
+C<root/static/images/flexigrid> directory.
+
+C<css/flexigrid/flexigrid.css> goes into the tutorial's
+C<root/static/css>. Edit the file and do an C<<
+%s!url(images/!url(../images/flexigrid/! >> substitution.
+
+C<flexigrid.js> goes into C<root/static/js>.
+
+Get jQuery from L<http://jqueryjs.googlecode.com/files/jquery-1.3.2.js> and
+save it to the tutorial's C<root/static/js/jquery.js>.
+
+=head2 Creating a Grid
+
+Let's make a controller for AJAX stuff:
+
+    package MyApp::Controller::AJAX;
+
+    use strict;
+    use warnings;
+    use parent 'Catalyst::Controller::HTML::FormFu';
+
+    sub index : Path Args(0) {
+        my ($self, $c) = @_;
+       
+        $c->stash(
+            no_wrapper => 1,
+            template => 'ajax.tt'
+        );
+    }
+
+    sub end : ActionClass('RenderView') {}
+
+Edit C<root/src/wrapper.tt2> and put this at the top:
+
+    [% IF no_wrapper %]
+    [% content %]
+    [% ELSE %]
+
+And an
+
+    [% END %]
+
+at the bottom.
+
+This allows us to skip the wrapper for some pages, as we will do here.
+
+Now for the HTML:
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+    <html xmlns="http://www.w3.org/1999/xhtml"; xml:lang="en" lang="en">
+    <head>
+      <link rel="stylesheet" href="[% c.uri_for('/static/css/flexigrid.css') %]" />
+      <script language="javascript" src="[% c.uri_for('/static/js/jquery.js') %]">
+      </script>
+      <script language="javascript" src="[% c.uri_for('/static/js/flexigrid.js') %]">
+      </script>
+    </head>
+    <body>
+
+    <table id="books_grid" style="display:none"></table>
+
+    <style>
+    .flexigrid div.fbutton .add
+    {   
+    background: url([% c.uri_for('/static/images/flexigrid/add.png') %]) no-repeat center left;
+    }
+    .flexigrid div.fbutton .edit
+    {   
+    background: url([% c.uri_for('/static/images/pen-16.gif') %]) no-repeat center left;
+    }
+    .flexigrid div.fbutton .delete
+    {   
+    background: url([% c.uri_for('/static/images/flexigrid/close.png') %]) no-repeat center left;
+    }
+    </style>
+
+    <script type="text/javascript">
+    function add_book(button, grid) {}
+    function edit_book(button, grid) {}
+    function delete_book(button, grid) {}
+
+    $("#books_grid").flexigrid({
+        url: '/api/grid',
+        dataType: 'json',
+        colModel : [
+            {display: 'id', name : 'id', width : 0, sortable : false, hide: true},
+            {display: 'Title', name : 'title', width : 200, sortable : true, align: 'left'},
+            {display: 'Rating', name : 'rating', width : 30, sortable : true, align: 'right'},
+            {display: 'Author(s)', name : 'authors', width : 275, sortable : true, align: 'left'},
+        ],
+        searchitems : [
+            {display: 'Title', name: 'title', isdefault: true},
+            {display: 'Rating', name: 'rating' },
+        ],
+        buttons : [
+            {name: 'Add', bclass: 'add', onpress : add_book},
+            {name: 'Edit', bclass: 'edit', onpress : edit_book},
+            {name: 'Delete', bclass: 'delete', onpress : delete_book},
+            {separator: true}
+        ],
+        sortname: "title",
+        sortorder: "asc",
+        usepager: true,
+        title: 'Books',
+        useRp: true,
+        rp: 10,
+        width: 550,
+        height: 245
+    });
+    </script>
+    </body>
+    </html>
+
+The C<pen-16.gif> icon is from L<http://brainstormsandraves.com/zips/icons/skdesigns-30-creamcoffee-blog-icons-16x16-10x10.zip>.
+
+Now we need to make an API controller that serves JSON for the grid:
+
+    package MyApp::Controller::API;
+
+    use strict;
+    use warnings;
+    use parent 'Catalyst::Controller::REST';
+
+    __PACKAGE__->config(default => 'application/json');
+
+    sub grid : Local ActionClass('REST') {}
+
+    sub grid_POST {
+        my ($self, $c) = @_;
+
+        my ($page, $search_by, $search_text, $rows, $sort_by, $sort_order) =
+            @{ $c->req->params }{qw/page qtype query rp sortname sortorder/};
+
+        s/\W*(\w+).*/$1/ for $sort_by, $sort_order, $search_by; # sql injections bad
+
+        my %data;
+        
+        my $rs = $c->model('DB::Book')->search({}, {
+            order_by => "$sort_by $sort_order",
+        });
+        
+        $rs = $rs->search_literal("lower($search_by) LIKE ?", lc($search_text))
+            if $search_by && $search_text;
+
+        my $paged_rs = $rs->search({}, {
+            page => $page,
+            rows => $rows,
+        });
+        
+        $data{total} = $rs->count;
+        $data{page}  = $page;
+        $data{rows}  = [
+            map { +{
+                id => $_->id,
+                cell => [
+                    $_->id,
+                    $_->title,
+                    $_->rating,
+                    $_->author_list,
+                ]
+            } } $paged_rs->all
+        ];
+        
+        $self->status_ok($c, entity => \%data);
+    }
+
+    1;
+
+Now start the server and go to L<http://localhost:3000/ajax> and you will see a
+lovely AJAX grid of books.
+
+You can click on the magnifying glass icon at the lower left to search
+by title or rating. Implementing search by author is left as an
+excercise for the reader :)
+
+=head2 Deleting
+
+The Add, Edit, and Delete buttons we put at the top of the grid don't work yet.
+
+Let's implement the Delete button.
+
+Expand the C<delete_book> JavaScript function stub to:
+
+    function delete_book(button, grid) {
+        var total_count = $('.trSelected', grid).length;
+        var deleted     = 0;
+       
+        $.each($('.trSelected', grid), function() {
+            var id = $('td:nth-child(1) div', this).html();
+            $.ajax({
+                url: '/api/book/' + id,
+                type: 'DELETE',
+                data: {},
+                dataType: 'json',
+                success: function() {
+                    deleted++;
+                    if (deleted == total_count) {
+                        $('#books_grid').flexReload();
+                    }
+                }
+            });
+        });
+    }
+
+Add to the API controller to support the Delete action:
+
+    sub book : Local ActionClass('REST') {
+        my ($self, $c, $id) = @_;
+
+        $c->stash(book => $c->model('DB::Book')->find($id));
+    }
+
+    sub book_DELETE {
+        my ($self, $c, $id) = @_;
+
+        $c->stash->{book}->delete;
+
+        $self->status_ok($c, entity => { message => 'success' });
+    }
+
+Now restart the server, go back to the grid in your browser and try
+selecting some rows and pressing the Delete button. Voila!
+
+=head2 Adding and Editing
+
+For this part we'll need the jQuery Form plugin, which you can get from
+L<http://jquery.malsup.com/form/jquery.form.js?2.36>. Save it in the
+tutorial app as C<root/static/js/jquery.form.js>.
+
+Add a C<< <script> >> link at the top of C<ajax.tt> for it:
+
+    <script language="javascript" src="[% c.uri_for('/static/js/jquery.form.js') %]">
+    </script>
+
+And above the C<< <table id="books_grid" ... >> tag we'll put a div to hold the
+popup form.
+
+    <div id="book_form" style="display:none"></div>
+
+A jQuery UI plugin for a popup would probably be nicer for this purpose.
+
+The JavaScript for the Add and Edit buttons is fairly simple:
+
+    function add_book(button, grid) {
+        var form_div = $('#book_form');
+
+        form_div.load('/ajax/book_form_add', null, function() {
+            $('#book_form form').ajaxForm({
+                url: '/ajax/book_form_add',
+                success: function() {
+                    form_div.hide();
+                    $('#books_grid').flexReload();
+                }
+            });
+            form_div.show();
+        });
+    }
+
+    function edit_book(button, grid) {
+        var id = $('.trSelected td:nth-child(1) div', grid).html();
+        var form_div = $('#book_form');
+        var url = '/ajax/book_form_edit/' + id;                                                                                
+                                                                                                                                     
+        form_div.load(url, null, function() {
+            $('#book_form form').ajaxForm({
+                url: url,
+                success: function() {
+                    form_div.hide();
+                    $('#books_grid').flexReload();
+                }
+            });
+            form_div.show();
+        });
+    }
+
+Now we need the AJAX Controller actions, in which we'll use the FormFu stuff
+that's already a part of the tutorial, but without the wrapper since we're
+using C<.load> to load the forms as HTML fragments.
+
+    sub book_form_add : Local Args(0) FormConfig('books/formfu_create.yml') {
+        my ($self, $c) = @_;
+
+        my $form = $c->stash->{form};
+
+        if ($form->submitted_and_valid) {
+            my $book = $c->model('DB::Book')->new_result({});
+            $form->model->update($book);
+        } else {
+            my @author_objs = $c->model("DB::Author")->all();
+            my @authors;
+            foreach (sort {$a->last_name cmp $b->last_name} @author_objs) {
+                push(@authors, [$_->id, $_->last_name]);
+            }
+            my $select = $form->get_element({type => 'Select'});
+            $select->options(\@authors);
+        }
+        
+        $c->stash(
+            no_wrapper => 1,
+            template => 'books/formfu_create.tt2'
+        );
+    }
+
+    sub book_form_edit : Local Args(1) FormConfig('books/formfu_create.yml') {
+        my ($self, $c, $id) = @_;
+
+        my $form = $c->stash->{form};
+        my $book = $c->model('DB::Book')->find($id);
+
+        if ($form->submitted_and_valid) {
+            $form->model->update($book);
+        } else {
+            my @author_objs = $c->model("DB::Author")->all();
+            my @authors;
+            foreach (sort {$a->last_name cmp $b->last_name} @author_objs) {
+                push(@authors, [$_->id, $_->last_name]);
+            }                                                                                                                  
+            my $select = $form->get_element({type => 'Select'});                                                                     
+            $select->options(\@authors);
+            $form->model->default_values($book);
+        }
+
+        $c->stash(
+            no_wrapper => 1,
+            template => 'books/formfu_create.tt2'
+        );
+    }
+
+Now try out the Add and Edit buttons, and you should see the new entries
+or your changes in the grid when you click the submit button. Changing
+the author from Edit doesn't work at the moment; this is a bug in the
+Tutorial.
+
+=head2 Catalyst and AJAX
+
+The Catalyst framework with components such as L<Catalyst::Controller::REST> or
+L<Catalyst::View::JSON> is well suited for making AJAX interfaces, as I hope
+we've demonstrated.
+
+From the Catalyst side, it's just a matter of serving and receiving JSON (or
+XML) data or serving HTML fragments, preferrably from a well-designed URI API
+based on REST.
+
+Here we used tools for the jQuery JavaScript framework, but other
+frameworks work just as well, such as ExtJS, Dojo, YUI, or Mootools. You
+can also use the jQuery selector functionality in combination with these
+other frameworks, with C<jQuery.noConflict> mode if they override C<$>.
+
+There are also higher-level tools such as L<Catalyst::Controller::DBIC::API> to
+automate accessing your L<DBIx::Class> schema from JavaScript, and even
+L<Catalyst::Plugin::AutoCRUD> which auto-generates a complete AJAX CRUD
+interface to your L<DBIx::Class> schema using ExtJS.
+
+=head1 AUTHOR
+
+Caelum: Rafael Kitover <rkitover@cpan.org>
+

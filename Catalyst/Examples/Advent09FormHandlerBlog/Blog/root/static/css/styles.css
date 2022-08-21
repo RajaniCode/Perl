@@ -1,0 +1,68 @@
+body {
+    font-family: verdana, sans-serif;
+    font-size: 14px;
+}
+
+form {
+    width: 600px;
+}
+
+form fieldset {
+    border: 2px solid #aaaaaa;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+form label {
+    display: block;
+    float: left;
+    width: 150px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+form input, form textarea {
+    margin-bottom: 20px;
+}
+
+form #title, form #content, form #tags_str, form #rank, form #ts {
+    width: 410px;
+    border: 1px solid gray;
+}
+
+form #tags_str {
+    height: 30px;
+}
+
+form #ts {
+    width: 100px;
+}
+
+form #submit {
+    width: 200px;
+    display: block;
+    margin-left: auto;
+    margin-right: 20px;
+    margin-bottom: 0;
+    font-weight: bold;
+}
+
+.info_msg, .error_msg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 98%;
+
+    border-bottom: 2px solid #334455;
+    padding: 1%;
+
+    background-color: #8899AA;
+    font-size: 24px;
+    color: white;
+}
+
+
+.error_msg {
+    border-color: #554433;
+    background-color: #AA9988;
+}

@@ -1,0 +1,66 @@
+=head1 Catalyst::ControllerRole::CatchErrors
+
+=head1 Synopsis
+
+Todays calendar entry explains how to deal with uncaught errors in your
+application using L<Catalyst::ControllerRole::CatchErrors>.
+
+=head1 Flexibility
+
+If your L<Catalyst> application throws an error the default behaviour is to
+generate a HTML error page saying something along the lines of
+"Sorry, there was a server error!".
+
+If L<debugging|https://metacpan.org/pod/Catalyst#Debug> is enabled this page is
+different and shows the error message and optionally a stacktrace.
+
+L<Catalyst::ControllerRole::CatchErrors> allows you to do custom error handling.
+The following scenarios come to mind.
+
+=over
+
+=item Customize the error page layout.
+
+The L<Catalyst> error page comes with its own CSS and looks entirely
+different then your page design.
+See also L<Catalyst::Plugin::CustomErrorMessage>.
+
+=item Customize the error page content.
+
+Perhaps you want to give some information to your users so they get a clue what
+went wrong.
+
+=item Send a non-HTML error response.
+
+If you have a REST application you don't want to send text/html default errors.
+
+=item Rethrow an error
+
+Maybe you want to catch some errors and let others be handled by the default
+mechanism. L<Catalyst::ControllerRole::CatchErrors> lets you do that too.
+Just rethrow it.
+
+=back
+
+=head1 Example
+
+    package MyApp::Controller::Root;
+    use Moose;
+    BEGIN { extends 'Catalyst::Controller' }
+    with 'Catalyst::ControllerRole::CatchErrors';
+
+    sub catch_errors : Private {
+        my ($self, $c, @errors) = @_;
+        # stuff
+    }
+
+=head1 Conclusion
+
+This module was written as a proof of concept and might be moved into the
+L<Catalyst> core at some point in the future.
+
+=head1 Author
+
+David Schmidt L<davewood@cpan.org|email:davewood@cpan.org>
+
+=cut

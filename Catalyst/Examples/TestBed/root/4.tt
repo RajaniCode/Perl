@@ -1,0 +1,11 @@
+[% WRAPPER page.tt title = c.config.name  %]
+<div class="span-24"> <h1>Javascript testbed</h1>
+<ul>
+<li><a class='stuff' href="">foo</a></li>
+<li><a class='stuff' href="">bar</a></li>
+<li><a class='stuff' href="">baz</a></li>
+<li><a class='stuff' href="">cunt</a></li>
+</div>
+[% END %]
+
+

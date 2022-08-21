@@ -1,0 +1,86 @@
+=head1 Another Take on redispatching
+
+=head1 Overview
+
+In a previous advent story we reviewed a recipe for adding a redispatch method
+to the global L<Catalyst> object.  This allows one to replace the current
+request with a new request to a different public path (URL).  Presented is a
+different approach to the same problem, but instead of hacking Catalyst internals
+it creates a new request and dispatches over PSGI.  This leads to a higher level
+of isolation as well as the ability to construct a full L<HTTP::Request> and
+customize it as need (for example make a POST request, or sets the query parameters.
+
+=head1 The redispatch_to methods
+
+Here's the method on your application class:
+
+    use warnings;
+    use strict;
+
+    package MyApp;
+
+    use Catalyst;
+    use HTTP::Message::PSGI ();
+
+    sub redispatch_to {
+      my $c = shift;
+      my $env = HTTP::Message::PSGI::req_to_psgi(shift);
+      our $app ||= $c->psgi_app;
+
+      $c->res->from_psgi_response( $app->($env) );
+    }
+
+    MyApp->setup;
+
+This method expects an L<HTTP::Request> as its first argument.  We then convert
+that request to a L<PSGI> style C<$env> hash and invoke it on the application
+coderef.  The response is sent directly to the initiating response.
+
+This would work fine with streaming and delayed style response, FWIW.  Here's an
+example controller using it:
+
+    use warnings;
+    use strict;
+
+    package MyApp::Controller::Example;
+
+    use base 'Catalyst::Controller';
+    use HTTP::Request::Common;
+
+    sub base :Path('') {
+      my ($self, $c) = @_;
+      $c->redispatch_to(GET $c->uri_for($self->action_for('target')));
+    }
+
+    sub target :Path('target') {
+      my ($self, $c) = @_;
+      $c->response->content_type('text/plain');
+      $c->response->body("This is the target action");
+    }
+
+    __PACKAGE__->meta->make_immutable;
+
+And a test case that shows how it works:
+
+    use Test::Most;
+    use Catalyst::Test 'MyApp';
+
+    my $res = request "/example";
+    is $res->code, 200, 'OK';
+    is $res->content, 'This is the target action', 'correct body';
+
+    done_testing;
+
+You might note this would allow one to redispatch to essentially ANY public URL
+include ones not part of your controlled website.  This may be construed as a bug
+or as a feature.
+
+=head1 Caveats
+
+Same as in the last advent article :)
+
+=head1 Author
+
+John Napiorkowski
+
+=cut

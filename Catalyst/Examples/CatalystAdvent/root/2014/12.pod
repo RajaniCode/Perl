@@ -1,0 +1,147 @@
+=head1 UTF8 in Controller Actions 
+
+All about stuff that is changing in the Holland (current development)
+release around content encoding and unicode support (part one,
+controllers and actions).
+
+=head1 Summary
+
+Starting in the upcoming L<Catalyst> release (holland, which is as of this
+writing dev003 on CPAN, and ready for your testing) Unicode encoding will be
+enabled by default.  In addition we've made a ton of fixes around encoding
+and utf8 scattered throughout the codebase.
+
+This is part one of a three part series on UTF8 and content body encoding.
+In this part we will review changes to how UTF8 characters can be used in
+controller actions, how it looks in the debugging screens (and your logs)
+as well as how you construct L<URL> objects to actions with utf8 paths
+(or using utf8 args or captures).
+
+=head1 Unicode in Controllers and URLs
+
+    package MyApp::Controller::Root;
+
+    use uf8;
+    use base 'Catalyst::Controller';
+
+    sub heart_with_arg :Path('♥') Args(1)  {
+      my ($self, $c, $arg) = @_;
+    }
+
+    sub base :Chained('/') CaptureArgs(0) {
+      my ($self, $c) = @_;
+    }
+
+      sub capture :Chained('base') PathPart('♥') CaptureArgs(1) {
+        my ($self, $c, $capture) = @_;
+      }
+
+        sub arg :Chained('capture') PathPart('♥') Args(1) {
+          my ($self, $c, $arg) = @_;
+        }
+
+=head1 Discussion
+
+In the example controller above we have constructed two matchable URL routes:
+
+    http://localhost/root/♥/{arg}
+    http://localhost/base/♥/{capture}/♥/{arg}
+
+The first one is a classic Path type action and the second uses Chaining, and
+spans three actions in total.  As you can see, you can use unicode characters
+in your Path and PartPart attributes (remember to use the C<utf8> pragma to allow
+these multibyte characters in your source).  The two constructed matchable routes
+would match the following incoming URLs:
+
+    (heart_with_arg) -> http://localhost/root/%E2%99%A5/{arg}
+    (base/capture/arg) -> http://localhost/base/%E2%99%A5/{capture}/%E2%99%A5/{arg}
+
+That path path C<%E2%99%A5> is url encoded unicode (assuming you are hitting this with
+a reasonably modern browser).  Its basically what goes over HTTP when your type a
+browser location that has the unicode 'heart' in it.  However we will use the unicode
+symbol in your debugging messages:
+
+    [debug] Loaded Path actions:
+    .-------------------------------------+--------------------------------------.
+    | Path                                | Private                              |
+    +-------------------------------------+--------------------------------------+
+    | /root/♥/*                          | /root/heart_with_arg                  |
+    '-------------------------------------+--------------------------------------'
+
+    [debug] Loaded Chained actions:
+    .-------------------------------------+--------------------------------------.
+    | Path Spec                           | Private                              |
+    +-------------------------------------+--------------------------------------+
+    | /base/♥/*/♥/*                       | /root/base (0)                       |
+    |                                     | -> /root/capture (1)                 |
+    |                                     | => /root/arg                         |
+    '-------------------------------------+--------------------------------------'
+
+And if the requested URL uses unicode characters in your captures or args (such as
+C<http://localhost:/base/♥/♥/♥/♥>) you should see the arguments and captures as their
+unicode characters as well:
+
+    [debug] Arguments are "♥"
+    [debug] "GET" request for "base/♥/♥/♥/♥" from "127.0.0.1"
+    .------------------------------------------------------------+-----------.
+    | Action                                                     | Time      |
+    +------------------------------------------------------------+-----------+
+    | /root/base                                                 | 0.000080s |
+    | /root/capture                                              | 0.000075s |
+    | /root/arg                                                  | 0.000755s |
+    '------------------------------------------------------------+-----------'
+
+Again, remember that we are display the unicode character and using it to match actions
+containing such multibyte characters BUT over HTTP you are getting these as URL encoded
+bytes.  For example if you looked at the L<PSGI> C<$env> value for C<REQUEST_URI> you 
+would see (for the above request) 
+
+    REQUEST_URI => "/base/%E2%99%A5/%E2%99%A5/%E2%99%A5/%E2%99%A5"
+
+So on the incoming request we decode so that we can match and display unicode characters
+(after decoding the URL encoding).  This makes it straightforward to use these types of
+multibyte characters in your actions and see them incoming in captures and arguments.
+
+=head1 UTF8 in constructing URLs.
+
+For the reverse (constructing meaningful URLs to actions that contain multibyte characters
+in their paths or path parts, or when you want to include such characters in your captures
+or arguments) L<Catalyst> will do the right thing (again just remember to use the C<utf8>
+pragma).
+
+    use utf8;
+    my $url = $c->uri_for( $c->controller('Root')->action_for('arg'), ['♥','♥']);
+
+When you stringyfy this object (for use in a template, for example) it will automatically
+do the right thing regarding utf8 encoding and url encoding.
+
+    http://localhost/base/%E2%99%A5/%E2%99%A5/%E2%99%A5/%E2%99%A5
+
+Since again what you want is a properly url encoded version of this.  Ultimately what you want
+to send over the wire via HTTP needs to be bytes (not unicode characters).
+
+=head1 Conclusion
+
+Starting with the Holland release we've made a big effort to improve L<Catalyst> support
+for multibyte characters.  You can use them in actions and in constructing URLs.  Also
+we've updated the debugging screens to show you these types of characters correctly.
+
+In upcoming articles we will look at how L<Catalyst> deal with utf8 body encoding
+and how we handle HTML forms.  So stay tuned!
+
+L<Catalyst> unicode is a work in progress; we are targeting the Holland release to
+make these fixes stable but you can play with it right now with the dev003 or better
+release on CPAN today!  If you are a unicode master please help us get it right and
+review the code changes and test cases.
+
+Even if you don't consider yourself an expert we recommend you start testing this
+release since unicode is on by default going forward.  I know this is a big change
+but it seems the only way to start getting this right is by getting everyone in the
+same conversation.  But this is still development code and everything can change
+between now and stable release.  So get your voice heard.
+
+=head1 Author
+
+John Napiorkowski L<jjnapiork@cpan.org|email:jjnapiork@cpan.org>
+
+=cut

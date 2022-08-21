@@ -1,0 +1,4 @@
+<form method="post">
+Participant Name :  <input type="textbox" name="name"/>
+<input type ="submit" name="submit" />
+</form>

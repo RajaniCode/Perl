@@ -1,0 +1,132 @@
+=head1 Filehandle Body Response 
+
+=head1 Overview
+
+We changed L<Catalyst> so that if you return a filehandle for the body
+response we now pass the filehandle down to the underlying Plack server.
+This enables one to take better advantage of the server's specific powers
+and to take advantage of middleware in the related middleware ecosystem.
+
+=head1 Introduction
+
+L<Catalyst> has allowed one to return a filehandle as the response of the
+application for quite some time.  For example:
+
+    package MyApp::Controller::File;
+
+    use base 'Catalyst::Controller';
+
+    sub file :Path('') {
+      my ($self, $c) = @_;
+      open(my $fh, '<', $path_to_file) || die ...;
+
+      $c->response->body($fh);
+    }
+
+However in the past the way this worked 'under the hood' was that during
+body finalization if we noticed the body was a filehandle we we read lines
+from it and then use the PSGI writer object to stream the data.  This was a
+nice and compatible approach (works the same no matter what the underlying
+plack server was) but it meant that you could not take advantage of any of the
+server abilities.  It also generally meant that you're file serving would have
+to be blocking.  And since its all happening at the Perl level it was probably
+not very fast.
+
+Now if during body finalization we notice that the body response is a filehandle
+like object (specifically if its a glob or an object that does the getline method)
+we pass that filehandle directly to the PSGI response.  That means instead of
+handling this at the Catalyst level we can take advantage of service specific features.
+
+=head1 Example
+
+In this example we will use L<Plack::Middleware::XSendfile> so that a compatible
+web server can directly service static files in an optimized manner.  You might want
+to do this if the static file needs to be behind some sort of authentication or 
+authorization but you don't want to sacrifice using a server optimized static file
+server.
+
+Here's a Controller:
+
+    package MyApp::Controller::Static;
+
+    use base 'Catalyst::Controller';
+    use IO::File::WithPath;
+
+
+    sub file :GET Path('') Args {
+      my ($self, $c, @args) = @_;
+      my $path = $c->path_to('static', @args);
+      my $fh = IO::File::WithPath->new($path);
+      $c->response->body($fh);
+    }
+
+    1;
+
+Please note this is for example use only.  You will need to do a bit more work to make
+sure you are not opening a security hole here...
+
+So now when you issue "GET /static/path/to/file.txt" we will create a filesystem path
+like "$APPROOT/static/path/to/file.txt" and then open a filehandle on it.  However by
+using L<IO::File::WithPath> we get a filehandle object with an additional method called
+C<path>.  This method returns the real path to the file that the filehandle is openned
+on.
+
+We now need to add the correct middleware to the Catalyst middleware stack.
+
+    package MyApp;
+
+    use Catalyst;
+
+    __PACKAGE__->setup_middleware('XSendfile');
+    __PACKAGE__->setup;
+
+Now when serving a response if that bit of middleware notices the filehandle response and
+it finds the ->path method AND the plack server running supports one of the more common
+'XSENDFILE' like approaches (Apache, Nginx support variations of this), it will strip out
+the actual body and add some HTTP headers so that the webserver you are using knows to
+serve the file directly using its highly optimized static file serving setup.  Here's an
+example nginx configuration (this assumes you are running your Catalyst application in
+fastcgi under nginx.)
+
+    server {
+        server_name example.com;
+        root /my/app/root;
+        location /private/repo/ {
+            internal;
+            alias /my/app/repo/;
+        }
+        location /private/staging/ {
+            internal;
+            alias /my/app/staging/;
+        }
+        location @proxy {
+            include /etc/nginx/fastcgi_params;
+            fastcgi_param SCRIPT_NAME '';
+            fastcgi_param PATH_INFO   $fastcgi_script_name;
+            fastcgi_param HTTP_X_SENDFILE_TYPE X-Accel-Redirect;
+            fastcgi_param HTTP_X_ACCEL_MAPPING /my/app=/private;
+            fastcgi_pass  unix:/my/app/run/app.sock;
+       }
+
+Nginx needs the additional X-Accel-Mapping header to be set in the webserver configuration,
+so the middleware will replace the absolute path of the IO object with the internal nginx
+path. This is also useful to prevent a buggy app to serve random files from the filesystem,
+as it's an internal redirect.
+
+In the example above, passing filehandles with a local path matching /my/app/staging or
+/my/app/repo will be served by nginx. Passing paths with other locations will lead to an
+internal server error.
+
+Setting the body to a filehandle without the path method bypasses the middleware completely.
+=head1 Discussion
+
+=head1 More Information
+
+L<Plack::Middleware::XSendfile>, L<IO::File::WithPath>
+L<https://metacpan.org/pod/Catalyst::Response#res-body-text-fh-iohandle_object>
+
+=head1 Author
+
+John Napiorkowski L<jjnapiork@cpan.org|email:jjnapiork@cpan.org>
+
+=cut

@@ -1,0 +1,8 @@
+First, you need to spawn the db:
+    script/catpaste_spawn_db.pl
+
+Then you can run script/catpaste_server.pl to start the application, if you
+want to use debug mode (advised) use:
+    script/catpaste_server.pl -d
+
+Patches Welcome.
